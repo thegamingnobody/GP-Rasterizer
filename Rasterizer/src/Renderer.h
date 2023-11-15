@@ -34,6 +34,8 @@ namespace dae
 
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const;
 
+		void Render_W1_Part1();
+
 	private:
 		SDL_Window* m_pWindow{};
 
