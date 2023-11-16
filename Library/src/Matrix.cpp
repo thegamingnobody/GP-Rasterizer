@@ -145,7 +145,11 @@ namespace dae {
 	Matrix Matrix::CreateLookAtLH(const Vector3& origin, const Vector3& forward, const Vector3& up)
 	{
 		//TODO W1
+		//Vector3 right{ Vector3::Cross(up, forward) };
+		//Vector3 localUp{ Vector3::Cross(forward, right) };
 
+		//Matrix result{ right, localUp, forward, origin };
+		//result[3][3] = 1;
 		return {};
 	}
 

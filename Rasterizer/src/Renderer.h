@@ -34,6 +34,7 @@ namespace dae
 
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const;
 
+		void RenderPixel(int px, int py);
 		void Render_W1_Part1();
 
 	private:

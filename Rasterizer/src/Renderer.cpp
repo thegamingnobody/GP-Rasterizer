@@ -24,7 +24,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	//m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 	//Initialize Camera
-	m_Camera.Initialize(60.f, { .0f,.0f,-10.f });
+	m_Camera.Initialize(60.f, { 1.0f,.0f,-10.f });
 }
 
 Renderer::~Renderer()
@@ -55,6 +55,18 @@ void Renderer::Render()
 void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const
 {
 	//Todo > W1 Projection Stage
+	int ratio{ m_Width / m_Height };
+
+	for (int index = 0; index < vertices_in.size(); index++)
+	{
+		vertices_out[index].position = m_Camera.viewMatrix.TransformPoint(vertices_in[index].position);
+
+		vertices_out[index].position.x = vertices_out[index].position.x / (ratio * m_Camera.fov * vertices_out[index].position.z);
+		vertices_out[index].position.y = vertices_out[index].position.y / (m_Camera.fov * vertices_out[index].position.z);
+
+		vertices_out[index].position.x = (vertices_out[index].position.x + 1) / 2 * m_Width;
+		vertices_out[index].position.y = (1 - vertices_out[index].position.y) / 2 * m_Height;
+	}
 }
 
 bool Renderer::SaveBufferToImage() const
@@ -80,37 +92,39 @@ inline bool PointInTriangle(const Vector2& point, const Vector2& vertexOrigin, c
 
 void Renderer::Render_W1_Part1()
 {
-	std::vector<Vector3> vertices_ndc
+	std::vector<Vertex> vertices_ndc
 	{
-		{  0.0f,  0.5f,  1.0f },
-		{  0.5f, -0.5f,  1.0f },
-		{ -0.5f, -0.5f,  1.0f }
+		{ {  0.0f,  0.5f,  1.0f }, colors::White },
+		{ {  0.5f, -0.5f,  1.0f }, colors::White },
+		{ { -0.5f, -0.5f,  1.0f }, colors::White }
 	};
 
-	std::vector<Vector2> vertices_ScreenSpace{};
-
-	for (int i = 0; i < vertices_ndc.size(); i++)
-	{
-		Vector2 tempVector{ (vertices_ndc[i].x + 1) / 2 * m_Width, (1 - vertices_ndc[i].y) / 2 * m_Height };
-		vertices_ScreenSpace.emplace_back(tempVector);
-	}
+	std::vector<Vertex> vertices_ScreenSpace{};
+	vertices_ScreenSpace.resize(3);
+	
+	VertexTransformationFunction(vertices_ndc, vertices_ScreenSpace);
 
 	Vector2 v0v1		{};
 	Vector2 v0v2		{};
 	Vector2 pixel		{};
 	ColorRGB finalColor	{};
 
+	//int minX = std::min({ vertices_ScreenSpace[0].x, vertices_ScreenSpace[1].x, vertices_ScreenSpace[2].x });
+	//int minY = std::min({ vertices_ScreenSpace[0].y, vertices_ScreenSpace[1].y, vertices_ScreenSpace[2].y });
+	//int maxX = std::max({ vertices_ScreenSpace[0].x, vertices_ScreenSpace[1].x, vertices_ScreenSpace[2].x });
+	//int maxY = std::max({ vertices_ScreenSpace[0].y, vertices_ScreenSpace[1].y, vertices_ScreenSpace[2].y });
+
 	//RENDER LOGIC
-	for (int px{}; px < m_Width; ++px)
+	for (int px{0}; px < m_Width; ++px)
 	{
-		for (int py{}; py < m_Height; ++py)
+		for (int py{0}; py < m_Height; ++py)
 		{
 			finalColor = ColorRGB(1.0f, 1.0f, 1.0f);
 			pixel = Vector2(px + 0.5f, py + 0.5f);
 
-			if (!PointInTriangle(pixel, vertices_ScreenSpace[0], vertices_ScreenSpace[1]) or
-				!PointInTriangle(pixel, vertices_ScreenSpace[1], vertices_ScreenSpace[2]) or
-				!PointInTriangle(pixel, vertices_ScreenSpace[2], vertices_ScreenSpace[0]))
+			if (!PointInTriangle(pixel, vertices_ScreenSpace[0].position.GetXY(), vertices_ScreenSpace[1].position.GetXY()) or
+				!PointInTriangle(pixel, vertices_ScreenSpace[1].position.GetXY(), vertices_ScreenSpace[2].position.GetXY()) or
+				!PointInTriangle(pixel, vertices_ScreenSpace[2].position.GetXY(), vertices_ScreenSpace[0].position.GetXY()))
 			{
 				finalColor = ColorRGB(0.0f, 0.0f, 0.0f);
 			}
