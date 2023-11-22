@@ -93,7 +93,6 @@ void Renderer::Render_W1_Part1()
 		{ {  3.0f, -2.0f,  2.0f }, colors::Green },
 		{ { -3.0f, -2.0f,  2.0f }, colors::Blue  },
 
-
 	};
 
 	int			verticesNDCSize	{ int(vertices_ndc.size()) };
@@ -133,8 +132,6 @@ void Renderer::Render_W1_Part1()
 				
 				if (m_pDepthBufferPixels[px + (py * m_Height)] > vertices_ScreenSpace[vertexIndex].position.z)
 				{
-					m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
-
 					vertices_weights[vertexIndex + 0] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 1].position.GetXY() - vertices_ScreenSpace[vertexIndex + 0].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 0].position.GetXY());
 					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
 					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
@@ -144,12 +141,14 @@ void Renderer::Render_W1_Part1()
 					{
 						totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
 						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
+						m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
 					}
 
 					//Update Color in Buffer
 					finalColor.MaxToOne();
 					//finalColor.ToneMap();
 
+					
 					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
 																		  static_cast<uint8_t>(finalColor.r * 255),
 																		  static_cast<uint8_t>(finalColor.g * 255),
