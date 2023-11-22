@@ -21,10 +21,10 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pBackBuffer = SDL_CreateRGBSurface(0, m_Width, m_Height, 32, 0, 0, 0, 0);
 	m_pBackBufferPixels = (uint32_t*)m_pBackBuffer->pixels;
 
-	//m_pDepthBufferPixels = new float[m_Width * m_Height];
+	m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 	//Initialize Camera
-	m_Camera.Initialize(60.f, { 1.0f,.0f,-10.f });
+	m_Camera.Initialize(60.f, { 0.0f,.0f,-10.f });
 }
 
 Renderer::~Renderer()
@@ -35,6 +35,9 @@ Renderer::~Renderer()
 void Renderer::Update(Timer* pTimer)
 {
 	m_Camera.Update(pTimer);
+
+	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
+	std::fill_n(m_pBackBufferPixels, m_Width * m_Height, 0);
 }
 
 void Renderer::Render()
@@ -59,6 +62,7 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 
 	for (int index = 0; index < vertices_in.size(); index++)
 	{
+		vertices_out[index].color = vertices_in[index].color;
 		vertices_out[index].position = m_Camera.viewMatrix.TransformPoint(vertices_in[index].position);
 
 		vertices_out[index].position.x = vertices_out[index].position.x / (ratio * m_Camera.fov * vertices_out[index].position.z);
@@ -66,6 +70,8 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 
 		vertices_out[index].position.x = (vertices_out[index].position.x + 1) / 2 * m_Width;
 		vertices_out[index].position.y = (1 - vertices_out[index].position.y) / 2 * m_Height;
+
+		vertices_out[index].position.z = vertices_in[index].position.z;
 	}
 }
 
@@ -74,70 +80,84 @@ bool Renderer::SaveBufferToImage() const
 	return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
 }
 
-inline bool PointInTriangle(const Vector2& point, const Vector2& vertexOrigin, const Vector2& vertexNext)
-{
-	Vector2 eVector{ vertexNext - vertexOrigin };
-	Vector2 vectorToP{ point - vertexOrigin };
-
-	float crossProduct{ Vector2::Cross(eVector, vectorToP) };
-
-	if (crossProduct < 0)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-
 void Renderer::Render_W1_Part1()
 {
+	
 	std::vector<Vertex> vertices_ndc
 	{
-		{ {  0.0f,  0.5f,  1.0f }, colors::White },
-		{ {  0.5f, -0.5f,  1.0f }, colors::White },
-		{ { -0.5f, -0.5f,  1.0f }, colors::White }
+		{ {  0.0f,  2.0f,  0.0f }, colors::Red },
+		{ {  1.5f, -1.0f,  0.0f }, colors::Red },
+		{ { -1.5f, -1.0f,  0.0f }, colors::Red },
+
+		{ {  0.0f,  4.0f,  2.0f }, colors::Red	 },
+		{ {  3.0f, -2.0f,  2.0f }, colors::Green },
+		{ { -3.0f, -2.0f,  2.0f }, colors::Blue  },
+
+
 	};
 
+	int			verticesNDCSize	{ int(vertices_ndc.size()) };
+	float		totalWeight		{};
+	Vector2		v0v1			{};
+	Vector2		v0v2			{};
+	Vector2		pixel			{};
+	ColorRGB	finalColor		{};
+	verticesNDCSize -= vertices_ndc.size() % 3;
+
 	std::vector<Vertex> vertices_ScreenSpace{};
-	vertices_ScreenSpace.resize(3);
+	vertices_ScreenSpace.resize(verticesNDCSize);
+	std::vector<float> vertices_weights{};
+	vertices_weights.resize(verticesNDCSize);
 	
 	VertexTransformationFunction(vertices_ndc, vertices_ScreenSpace);
 
-	Vector2 v0v1		{};
-	Vector2 v0v2		{};
-	Vector2 pixel		{};
-	ColorRGB finalColor	{};
-
-	//int minX = std::min({ vertices_ScreenSpace[0].x, vertices_ScreenSpace[1].x, vertices_ScreenSpace[2].x });
-	//int minY = std::min({ vertices_ScreenSpace[0].y, vertices_ScreenSpace[1].y, vertices_ScreenSpace[2].y });
-	//int maxX = std::max({ vertices_ScreenSpace[0].x, vertices_ScreenSpace[1].x, vertices_ScreenSpace[2].x });
-	//int maxY = std::max({ vertices_ScreenSpace[0].y, vertices_ScreenSpace[1].y, vertices_ScreenSpace[2].y });
-
 	//RENDER LOGIC
-	for (int px{0}; px < m_Width; ++px)
+	for (int vertexIndex{}; vertexIndex < verticesNDCSize; vertexIndex += 3)
 	{
-		for (int py{0}; py < m_Height; ++py)
-		{
-			finalColor = ColorRGB(1.0f, 1.0f, 1.0f);
-			pixel = Vector2(px + 0.5f, py + 0.5f);
+		int minX = std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x });
+		int minY = std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y });
+		int maxX = std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x });
+		int maxY = std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y });
 
-			if (!PointInTriangle(pixel, vertices_ScreenSpace[0].position.GetXY(), vertices_ScreenSpace[1].position.GetXY()) or
-				!PointInTriangle(pixel, vertices_ScreenSpace[1].position.GetXY(), vertices_ScreenSpace[2].position.GetXY()) or
-				!PointInTriangle(pixel, vertices_ScreenSpace[2].position.GetXY(), vertices_ScreenSpace[0].position.GetXY()))
+		minX = std::clamp(minX, 0, m_Width);
+		maxX = std::clamp(maxX, 0, m_Width);
+		minY = std::clamp(minY, 0, m_Height);
+		maxY = std::clamp(maxY, 0, m_Height);
+
+		for (int px{minX}; px < maxX; ++px)
+		{
+			for (int py{minY}; py < maxY; ++py)
 			{
 				finalColor = ColorRGB(0.0f, 0.0f, 0.0f);
+				pixel = Vector2(px + 0.5f, py + 0.5f);
+				
+				if (m_pDepthBufferPixels[px + (py * m_Height)] > vertices_ScreenSpace[vertexIndex].position.z)
+				{
+					m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
+
+					vertices_weights[vertexIndex + 0] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 1].position.GetXY() - vertices_ScreenSpace[vertexIndex + 0].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 0].position.GetXY());
+					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
+					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
+
+					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 or
+						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0)
+					{
+						totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
+						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
+					}
+
+					//Update Color in Buffer
+					finalColor.MaxToOne();
+					//finalColor.ToneMap();
+
+					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
+																		  static_cast<uint8_t>(finalColor.r * 255),
+																		  static_cast<uint8_t>(finalColor.g * 255),
+																		  static_cast<uint8_t>(finalColor.b * 255));
+				}
 			}
-
-			//Update Color in Buffer
-			finalColor.MaxToOne();
-			//finalColor.ToneMap();
-
-			m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
-																  static_cast<uint8_t>(finalColor.r * 255),
-																  static_cast<uint8_t>(finalColor.g * 255),
-																  static_cast<uint8_t>(finalColor.b * 255));
 		}
+
 	}
 
 }

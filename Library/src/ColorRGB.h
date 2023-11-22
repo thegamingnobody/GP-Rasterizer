@@ -99,6 +99,10 @@ namespace dae
 		{
 			return { r * s, g * s,b * s };
 		}
+		ColorRGB operator*(float s)
+		{
+			return { r * s, g * s,b * s };
+		}
 
 		const ColorRGB& operator/=(float s)
 		{

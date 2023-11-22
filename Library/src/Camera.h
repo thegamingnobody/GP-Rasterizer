@@ -58,8 +58,8 @@ namespace dae
 			invViewMatrix = rotation * translation;
 			viewMatrix = invViewMatrix.Inverse();
 
-			forward = viewMatrix.TransformVector(Vector3::UnitZ);
-			forward.Normalize();
+			forward = viewMatrix.TransformVector(-Vector3::UnitZ);
+			forward.z *= -1;
 
 			right = viewMatrix.TransformVector(Vector3::UnitX);
 			right.Normalize();
@@ -78,103 +78,142 @@ namespace dae
 
 		void Update(Timer* pTimer)
 		{
+			//const float deltaTime = pTimer->GetElapsed();
+
+			////Keyboard Input
+			//const uint8_t* pKeyboardState = SDL_GetKeyboardState(nullptr);
+
+			//const float camSpeedDelta{ m_CameraMovementSpeed * deltaTime };
+			//int forwardModifier{};
+			//int rightModifier{};
+			//int upModifier{};
+
+			//if (pKeyboardState[SDL_SCANCODE_W])
+			//{
+			//	forwardModifier = 1;
+			//}
+			//if (pKeyboardState[SDL_SCANCODE_S])
+			//{
+			//	forwardModifier = -1;
+			//}
+			//if (pKeyboardState[SDL_SCANCODE_A])
+			//{
+			//	rightModifier = -1;
+			//}
+			//if (pKeyboardState[SDL_SCANCODE_D])
+			//{
+			//	rightModifier = 1;
+			//}
+			//if (pKeyboardState[SDL_SCANCODE_SPACE])
+			//{
+			//	upModifier = 1;
+			//}
+			//if (pKeyboardState[SDL_SCANCODE_LSHIFT])
+			//{
+			//	upModifier = -1;
+			//}
+
+			//origin += camSpeedDelta * forward * static_cast<float>(forwardModifier);
+			//origin += camSpeedDelta * right * static_cast<float>(rightModifier);
+			//origin += camSpeedDelta * up * static_cast<float>(upModifier);
+
+			////Mouse Input
+			//int mouseX{}, mouseY{};
+			//const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);
+
+			//const float camRotateDelta{ 1.5f / 180.0f };
+
+			//if (mouseState == SDL_BUTTON_LMASK)
+			//{
+			//	totalYaw += camRotateDelta * (-mouseX);
+			//	if (mouseY < 0)
+			//	{
+			//		origin += camSpeedDelta * forward;
+			//	}
+			//	if (mouseY > 0)
+			//	{
+			//		origin += camSpeedDelta * (-forward);
+			//	}
+			//}
+			//if (mouseState == SDL_BUTTON_RMASK)
+			//{
+			//	totalYaw += camRotateDelta * (mouseX);
+			//	totalPitch += camRotateDelta * (-mouseY);
+			//}
+			//if (mouseState == SDL_BUTTON_LMASK + SDL_BUTTON_RMASK)
+			//{
+			//	if (mouseY < 0)
+			//	{
+			//		origin += camSpeedDelta * up;
+			//	}
+			//	if (mouseY > 0)
+			//	{
+			//		origin += camSpeedDelta * -up;
+			//	}
+			//}
+
+			////todo: W2
+			//CalculateViewMatrix();
+
+			////Update Matrices
+			//CalculateViewMatrix();
+			//CalculateProjectionMatrix(); //Try to optimize this - should only be called once or when fov/aspectRatio changes
+
 			const float deltaTime = pTimer->GetElapsed();
+
+			//Camera Update Logic
+			//...
+			const float movementSpeed{ 5.f * deltaTime };
 
 			//Keyboard Input
 			const uint8_t* pKeyboardState = SDL_GetKeyboardState(nullptr);
 
-			const float camSpeedDelta{ m_CameraMovementSpeed * deltaTime };
-			int forwardModifier{};
-			int rightModifier{};
-			int upModifier{};
-
 			if (pKeyboardState[SDL_SCANCODE_W])
 			{
-				forwardModifier = 1;
-			}
-			if (pKeyboardState[SDL_SCANCODE_S])
-			{
-				forwardModifier = -1;
-			}
-			if (pKeyboardState[SDL_SCANCODE_A])
-			{
-				rightModifier = -1;
-			}
-			if (pKeyboardState[SDL_SCANCODE_D])
-			{
-				rightModifier = 1;
-			}
-			if (pKeyboardState[SDL_SCANCODE_SPACE])
-			{
-				upModifier = 1;
-			}
-			if (pKeyboardState[SDL_SCANCODE_LSHIFT])
-			{
-				upModifier = -1;
+				origin += forward * movementSpeed;
 			}
 
-			origin += camSpeedDelta * forward * static_cast<float>(forwardModifier);
-			origin += camSpeedDelta * right * static_cast<float>(rightModifier);
-			origin += camSpeedDelta * up * static_cast<float>(upModifier);
+			if (pKeyboardState[SDL_SCANCODE_S])
+			{
+				origin -= forward * movementSpeed;
+			}
+
+			if (pKeyboardState[SDL_SCANCODE_A])
+			{
+				origin -= Vector3::Cross(up, forward) * movementSpeed;
+			}
+
+			if (pKeyboardState[SDL_SCANCODE_D])
+			{
+				origin += Vector3::Cross(up, forward) * movementSpeed;
+			}
 
 			//Mouse Input
 			int mouseX{}, mouseY{};
 			const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
-			const float camRotateDelta{ m_CameraRotationSpeed * deltaTime };
+			const float rotationSpeed{ 1.5f / 180.0f };
 
 			if (mouseState == SDL_BUTTON_LMASK)
 			{
-				if (mouseX < 0)
-				{
-					totalYaw += camRotateDelta;
-				}
-				if (mouseX > 0)
-				{
-					totalYaw -= camRotateDelta;
-				}
-				if (mouseY < 0)
-				{
-					origin += camSpeedDelta * forward;
-				}
-				if (mouseY > 0)
-				{
-					origin += camSpeedDelta * (-forward);
-				}
-			}
-			if (mouseState == SDL_BUTTON_RMASK)
-			{
-				if (mouseX < 0)
-				{
-					totalYaw -= camRotateDelta;
-				}
-				if (mouseX > 0)
-				{
-					totalYaw += camRotateDelta;
-				}
-				if (mouseY < 0)
-				{
-					totalPitch += camRotateDelta;
-				}
-				if (mouseY > 0)
-				{
-					totalPitch -= camRotateDelta;
-				}
-			}
-			if (mouseState == SDL_BUTTON_LMASK + SDL_BUTTON_RMASK)
-			{
-				if (mouseY < 0)
-				{
-					origin += camSpeedDelta * up;
-				}
-				if (mouseY > 0)
-				{
-					origin += camSpeedDelta * -up;
-				}
+				origin -= forward * float(mouseY) * movementSpeed;
+				totalYaw += mouseX * rotationSpeed;
 			}
 
-			//todo: W2
-			CalculateViewMatrix();
+			if (mouseState == SDL_BUTTON_RMASK)
+			{
+				totalPitch += -mouseY * rotationSpeed;
+				totalYaw += mouseX * rotationSpeed;
+			}
+
+			if (mouseState == SDL_BUTTON_X2)
+			{
+				origin.y -= mouseY * movementSpeed;
+			}
+
+			Matrix rotationMatrix = Matrix::CreateRotation(totalPitch, totalYaw, 0);
+			forward = rotationMatrix.TransformVector(Vector3::UnitZ);
+			forward.Normalize();
 
 			//Update Matrices
 			CalculateViewMatrix();
