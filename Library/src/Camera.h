@@ -107,6 +107,16 @@ namespace dae
 				origin += Vector3::Cross(up, forward) * movementSpeed;
 			}
 
+			if (pKeyboardState[SDL_SCANCODE_SPACE])
+			{
+				origin += up * movementSpeed;
+			}
+
+			if (pKeyboardState[SDL_SCANCODE_LSHIFT])
+			{
+				origin -= up * movementSpeed;
+			}
+
 			//Mouse Input
 			int mouseX{}, mouseY{};
 			const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);

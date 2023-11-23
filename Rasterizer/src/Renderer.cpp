@@ -86,22 +86,23 @@ void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector
 	verticesNDC.clear();
 	trianglesVertexIndices.clear();
 #pragma region W6
-//
-//	verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
-//	verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
-//	verticesNDC.push_back({ { -1.5f, -1.0f,  0.0f }, colors::Red });
-//
-//	verticesNDC.push_back({ {  0.0f,  4.0f,  2.0f }, colors::Red   });
-//	verticesNDC.push_back({ {  3.0f, -2.0f,  2.0f }, colors::Green });
-//	verticesNDC.push_back({ { -3.0f, -2.0f,  2.0f }, colors::Blue  });
-//
-//	trianglesVertexIndices.push_back(0);
-//	trianglesVertexIndices.push_back(1);
-//	trianglesVertexIndices.push_back(2);
-//	trianglesVertexIndices.push_back(3);
-//	trianglesVertexIndices.push_back(4);
-//	trianglesVertexIndices.push_back(5);
-//	trianglesVertexIndices.push_back(6);
+
+	//verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
+	//verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
+	//verticesNDC.push_back({ { -1.5f, -1.0f,  0.0f }, colors::Red });
+
+	//verticesNDC.push_back({ {  0.0f,  4.0f,  2.0f }, colors::Red   });
+	//verticesNDC.push_back({ {  3.0f, -2.0f,  2.0f }, colors::Green });
+	//verticesNDC.push_back({ { -3.0f, -2.0f,  2.0f }, colors::Blue  });
+
+	//trianglesVertexIndices.push_back(0);
+	//trianglesVertexIndices.push_back(1);
+	//trianglesVertexIndices.push_back(2);
+	//trianglesVertexIndices.push_back(2);
+	//trianglesVertexIndices.push_back(3);
+	//trianglesVertexIndices.push_back(3);
+	//trianglesVertexIndices.push_back(4);
+	//trianglesVertexIndices.push_back(5);
 #pragma endregion
 
 #pragma region W7
@@ -146,7 +147,6 @@ void Renderer::Render_W7()
 	ColorRGB	finalColor		{};
 
 	std::vector<Vertex> vertices_ScreenSpace{};
-	//vertices_ScreenSpace.resize(verticesNDCSize);
 	std::vector<float> vertices_weights{};
 	vertices_weights.resize(m_TrianglesVertexIndices.size());
 	
@@ -172,7 +172,7 @@ void Renderer::Render_W7()
 				finalColor = ColorRGB(0.0f, 0.0f, 0.0f);
 				pixel = Vector2(px + 0.5f, py + 0.5f);
 				
-				if (m_pDepthBufferPixels[px + (py * m_Height)] > vertices_ScreenSpace[vertexIndex].position.z)
+				if (m_pDepthBufferPixels[px + (py * m_Width)] > vertices_ScreenSpace[vertexIndex].position.z)
 				{
 					vertices_weights[vertexIndex + 0] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 1].position.GetXY() - vertices_ScreenSpace[vertexIndex + 0].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 0].position.GetXY());
 					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
@@ -181,14 +181,19 @@ void Renderer::Render_W7()
 					if (vertices_weights[vertexIndex + 0] < 0 or vertices_weights[vertexIndex + 1] < 0 or vertices_weights[vertexIndex + 2] < 0) continue;
 					
 					totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
-					finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
-					m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
+
+					vertices_weights[vertexIndex + 0] = vertices_weights[vertexIndex + 0] / totalWeight;
+					vertices_weights[vertexIndex + 1] = vertices_weights[vertexIndex + 1] / totalWeight;
+					vertices_weights[vertexIndex + 2] = vertices_weights[vertexIndex + 2] / totalWeight;
+					totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
+
+					finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color);
+					m_pDepthBufferPixels[px + (py * m_Width)] = vertices_ScreenSpace[vertexIndex].position.z;
 
 					//Update Color in Buffer
 					finalColor.MaxToOne();
 					//finalColor.ToneMap();
 
-					
 					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
 																		  static_cast<uint8_t>(finalColor.r * 255),
 																		  static_cast<uint8_t>(finalColor.g * 255),
