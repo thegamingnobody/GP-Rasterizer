@@ -62,16 +62,17 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 
 	for (int index = 0; index < vertices_in.size(); index++)
 	{
-		vertices_out[index].color = vertices_in[index].color;
-		vertices_out[index].position = m_Camera.viewMatrix.TransformPoint(vertices_in[index].position);
+		Vertex out{};
+		out.color = vertices_in[index].color;
+		out.position = m_Camera.viewMatrix.TransformPoint(vertices_in[index].position);
 
-		vertices_out[index].position.x = vertices_out[index].position.x / (ratio * m_Camera.fov * vertices_out[index].position.z);
-		vertices_out[index].position.y = vertices_out[index].position.y / (m_Camera.fov * vertices_out[index].position.z);
+		out.position.x = out.position.x / (ratio * m_Camera.fov * out.position.z);
+		out.position.y = out.position.y / (m_Camera.fov * out.position.z);
 
-		vertices_out[index].position.x = (vertices_out[index].position.x + 1) / 2 * m_Width;
-		vertices_out[index].position.y = (1 - vertices_out[index].position.y) / 2 * m_Height;
+		out.position.x = (out.position.x + 1) / 2 * m_Width;
+		out.position.y = (1 - out.position.y) / 2 * m_Height;
 
-		vertices_out[index].position.z = vertices_in[index].position.z;
+		vertices_out.push_back(out);
 	}
 }
 
@@ -88,7 +89,6 @@ void Renderer::Render_W1_Part1()
 		{ {  0.0f,  2.0f,  0.0f }, colors::Red },
 		{ {  1.5f, -1.0f,  0.0f }, colors::Red },
 		{ { -1.5f, -1.0f,  0.0f }, colors::Red },
-
 		{ {  0.0f,  4.0f,  2.0f }, colors::Red	 },
 		{ {  3.0f, -2.0f,  2.0f }, colors::Green },
 		{ { -3.0f, -2.0f,  2.0f }, colors::Blue  },
@@ -104,7 +104,7 @@ void Renderer::Render_W1_Part1()
 	verticesNDCSize -= vertices_ndc.size() % 3;
 
 	std::vector<Vertex> vertices_ScreenSpace{};
-	vertices_ScreenSpace.resize(verticesNDCSize);
+	//vertices_ScreenSpace.resize(verticesNDCSize);
 	std::vector<float> vertices_weights{};
 	vertices_weights.resize(verticesNDCSize);
 	
@@ -113,10 +113,10 @@ void Renderer::Render_W1_Part1()
 	//RENDER LOGIC
 	for (int vertexIndex{}; vertexIndex < verticesNDCSize; vertexIndex += 3)
 	{
-		int minX = std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x });
-		int minY = std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y });
-		int maxX = std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x });
-		int maxY = std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y });
+		int minX = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
+		int minY = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
+		int maxX = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
+		int maxY = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
 
 		minX = std::clamp(minX, 0, m_Width);
 		maxX = std::clamp(maxX, 0, m_Width);
@@ -136,8 +136,8 @@ void Renderer::Render_W1_Part1()
 					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
 					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
 
-					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 or
-						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0)
+					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 /*or
+						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0*/)
 					{
 						totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
 						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
