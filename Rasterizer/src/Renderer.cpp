@@ -83,9 +83,9 @@ bool Renderer::SaveBufferToImage() const
 
 void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<int>& trianglesVertexIndices)
 {
-//#pragma region W6
-//	verticesNDC.clear();
-//	trianglesVertexIndices.clear();
+	verticesNDC.clear();
+	trianglesVertexIndices.clear();
+#pragma region W6
 //
 //	verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
 //	verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
@@ -102,11 +102,9 @@ void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector
 //	trianglesVertexIndices.push_back(4);
 //	trianglesVertexIndices.push_back(5);
 //	trianglesVertexIndices.push_back(6);
-//#pragma endregion
-#pragma region W7
-	verticesNDC.clear();
-	trianglesVertexIndices.clear();
+#pragma endregion
 
+#pragma region W7
 	verticesNDC.push_back({ {-3,  3, -2}, colors::White });
 	verticesNDC.push_back({ { 0,  3, -2}, colors::White });
 	verticesNDC.push_back({ { 3,  3, -2}, colors::White });
@@ -180,13 +178,11 @@ void Renderer::Render_W7()
 					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
 					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
 
-					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 or
-						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0)
-					{
-						totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
-						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
-						m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
-					}
+					if (vertices_weights[vertexIndex + 0] < 0 or vertices_weights[vertexIndex + 1] < 0 or vertices_weights[vertexIndex + 2] < 0) continue;
+					
+					totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
+					finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
+					m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
 
 					//Update Color in Buffer
 					finalColor.MaxToOne();
