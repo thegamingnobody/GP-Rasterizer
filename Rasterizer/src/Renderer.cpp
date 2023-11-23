@@ -83,60 +83,57 @@ bool Renderer::SaveBufferToImage() const
 
 void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<int>& trianglesVertexIndices)
 {
-#pragma region W6
+//#pragma region W6
+//	verticesNDC.clear();
+//	trianglesVertexIndices.clear();
+//
+//	verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
+//	verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
+//	verticesNDC.push_back({ { -1.5f, -1.0f,  0.0f }, colors::Red });
+//
+//	verticesNDC.push_back({ {  0.0f,  4.0f,  2.0f }, colors::Red   });
+//	verticesNDC.push_back({ {  3.0f, -2.0f,  2.0f }, colors::Green });
+//	verticesNDC.push_back({ { -3.0f, -2.0f,  2.0f }, colors::Blue  });
+//
+//	trianglesVertexIndices.push_back(0);
+//	trianglesVertexIndices.push_back(1);
+//	trianglesVertexIndices.push_back(2);
+//	trianglesVertexIndices.push_back(3);
+//	trianglesVertexIndices.push_back(4);
+//	trianglesVertexIndices.push_back(5);
+//	trianglesVertexIndices.push_back(6);
+//#pragma endregion
+#pragma region W7
 	verticesNDC.clear();
 	trianglesVertexIndices.clear();
 
-	verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
-	verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
-	verticesNDC.push_back({ { -1.5f, -1.0f,  0.0f }, colors::Red });
+	verticesNDC.push_back({ {-3,  3, -2}, colors::White });
+	verticesNDC.push_back({ { 0,  3, -2}, colors::White });
+	verticesNDC.push_back({ { 3,  3, -2}, colors::White });
+	verticesNDC.push_back({ {-3,  0, -2}, colors::White });
+	verticesNDC.push_back({ { 0,  0, -2}, colors::White });
+	verticesNDC.push_back({ { 3,  0, -2}, colors::White });
+	verticesNDC.push_back({ {-3, -3, -2}, colors::White });
+	verticesNDC.push_back({ { 0, -3, -2}, colors::White });
+	verticesNDC.push_back({ { 3, -3, -2}, colors::White });
 
-	verticesNDC.push_back({ {  0.0f,  4.0f,  2.0f }, colors::Red   });
-	verticesNDC.push_back({ {  3.0f, -2.0f,  2.0f }, colors::Green });
-	verticesNDC.push_back({ { -3.0f, -2.0f,  2.0f }, colors::Blue  });
-
+	trianglesVertexIndices.push_back(3);
 	trianglesVertexIndices.push_back(0);
-	trianglesVertexIndices.push_back(1);
-	trianglesVertexIndices.push_back(2);
-
-	trianglesVertexIndices.push_back(2);
-	trianglesVertexIndices.push_back(3);
-	
-	trianglesVertexIndices.push_back(3);
 	trianglesVertexIndices.push_back(4);
+	trianglesVertexIndices.push_back(1);	
 	trianglesVertexIndices.push_back(5);
-#pragma endregion
+	trianglesVertexIndices.push_back(2);
 
-#pragma region W7
-	//verticesNDC.clear();  
-	//trianglesVertexIndices.clear(); 
+	trianglesVertexIndices.push_back(2);
+	trianglesVertexIndices.push_back(6);
 
-	//verticesNDC.push_back({ {-3,  3, -2}, colors::White }); 
-	//verticesNDC.push_back({ { 0,  3, -2}, colors::White }); 
-	//verticesNDC.push_back({ { 3,  3, -2}, colors::White }); 
-	//verticesNDC.push_back({ {-3,  0, -2}, colors::White }); 
-	//verticesNDC.push_back({ { 0,  0, -2}, colors::White });  
-	//verticesNDC.push_back({ { 3,  0, -2}, colors::White }); 
-	//verticesNDC.push_back({ {-3, -3, -2}, colors::White }); 
-	//verticesNDC.push_back({ { 0, -3, -2}, colors::White }); 
-	//verticesNDC.push_back({ { 3, -3, -2}, colors::White }); 
+	trianglesVertexIndices.push_back(6);
+	trianglesVertexIndices.push_back(3);
+	trianglesVertexIndices.push_back(7);
+	trianglesVertexIndices.push_back(4);
+	trianglesVertexIndices.push_back(8);
+	trianglesVertexIndices.push_back(5);
 
-	//trianglesVertexIndices.push_back(3); 
-	//trianglesVertexIndices.push_back(0); 
-	//trianglesVertexIndices.push_back(4); 
-	//trianglesVertexIndices.push_back(1); 
-	//trianglesVertexIndices.push_back(5); 
-	//trianglesVertexIndices.push_back(2); 
-
-	//trianglesVertexIndices.push_back(2); 
-	//trianglesVertexIndices.push_back(6); 
-
-	//trianglesVertexIndices.push_back(6); 
-	//trianglesVertexIndices.push_back(3); 
-	//trianglesVertexIndices.push_back(7); 
-	//trianglesVertexIndices.push_back(4); 
-	//trianglesVertexIndices.push_back(8); 
-	//trianglesVertexIndices.push_back(5);
 #pragma endregion
 }
 
@@ -144,10 +141,6 @@ void Renderer::Render_W7()
 {
 	InitializeTriangles(m_VerticesNDC, m_TrianglesVertexIndices);
 
-	int			minX			{};
-	int			minY			{};
-	int			maxX			{};
-	int			maxY			{};
 	float		totalWeight		{};
 	Vector2		v0v1			{};
 	Vector2		v0v2			{};
@@ -156,7 +149,7 @@ void Renderer::Render_W7()
 
 	std::vector<Vertex> vertices_ScreenSpace{};
 	//vertices_ScreenSpace.resize(verticesNDCSize);
-	std::vector<float>	vertices_weights	{};
+	std::vector<float> vertices_weights{};
 	vertices_weights.resize(m_TrianglesVertexIndices.size());
 	
 	VertexTransformationFunction(m_VerticesNDC, vertices_ScreenSpace);
@@ -164,10 +157,10 @@ void Renderer::Render_W7()
 	//RENDER LOGIC
 	for (int vertexIndex{}; vertexIndex < (m_TrianglesVertexIndices.size()-2); vertexIndex++)
 	{
-		minX = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
-		minY = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
-		maxX = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
-		maxY = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
+		int minX = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
+		int minY = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
+		int maxX = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
+		int maxY = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
 
 		minX = std::clamp(minX, 0, m_Width);
 		maxX = std::clamp(maxX, 0, m_Width);
@@ -183,23 +176,23 @@ void Renderer::Render_W7()
 				
 				if (m_pDepthBufferPixels[px + (py * m_Height)] > vertices_ScreenSpace[vertexIndex].position.z)
 				{
-					vertices_weights[vertexIndex + 0] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 1].position.GetXY() - vertices_ScreenSpace[vertexIndex + 0].position.GetXY(), 
-																	   pixel - vertices_ScreenSpace[vertexIndex + 0].position.GetXY());
-					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), 
-																	   pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
-					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), 
-																	   pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
+					vertices_weights[vertexIndex + 0] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 1].position.GetXY() - vertices_ScreenSpace[vertexIndex + 0].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 0].position.GetXY());
+					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
+					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
 
-					if (vertices_weights[vertexIndex + 0] < 0 or vertices_weights[vertexIndex + 1] < 0 or vertices_weights[vertexIndex + 2] < 0) continue;
-
-					totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
-					finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
-					m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
+					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 or
+						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0)
+					{
+						totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
+						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
+						m_pDepthBufferPixels[px + (py * m_Height)] = vertices_ScreenSpace[vertexIndex].position.z;
+					}
 
 					//Update Color in Buffer
 					finalColor.MaxToOne();
 					//finalColor.ToneMap();
 
+					
 					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
 																		  static_cast<uint8_t>(finalColor.r * 255),
 																		  static_cast<uint8_t>(finalColor.g * 255),
