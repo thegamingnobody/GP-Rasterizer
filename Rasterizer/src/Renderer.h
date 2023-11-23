@@ -34,7 +34,9 @@ namespace dae
 
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const;
 
-		void Render_W1_Part1();
+		void Render_W7();
+
+		void InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<int>& trianglesVertexIndices);
 
 	private:
 		SDL_Window* m_pWindow{};
@@ -49,5 +51,8 @@ namespace dae
 
 		int m_Width{};
 		int m_Height{};
+
+		std::vector<Vertex> m_VerticesNDC;
+		std::vector<int> m_TrianglesVertexIndices;
 	};
 }

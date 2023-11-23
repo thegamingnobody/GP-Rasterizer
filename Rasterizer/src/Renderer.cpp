@@ -29,7 +29,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 Renderer::~Renderer()
 {
-	//delete[] m_pDepthBufferPixels;
+	delete[] m_pDepthBufferPixels;
 }
 
 void Renderer::Update(Timer* pTimer)
@@ -46,7 +46,7 @@ void Renderer::Render()
 	//Lock BackBuffer
 	SDL_LockSurface(m_pBackBuffer);
 
-	Render_W1_Part1();
+	Render_W7();
 
 	//@END
 	//Update SDL Surface
@@ -60,11 +60,11 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 	//Todo > W1 Projection Stage
 	int ratio{ m_Width / m_Height };
 
-	for (int index = 0; index < vertices_in.size(); index++)
+	for (int index = 0; index < m_TrianglesVertexIndices.size(); index++)
 	{
 		Vertex out{};
-		out.color = vertices_in[index].color;
-		out.position = m_Camera.viewMatrix.TransformPoint(vertices_in[index].position);
+		out.color = vertices_in[m_TrianglesVertexIndices[index]].color;
+		out.position = m_Camera.viewMatrix.TransformPoint(vertices_in[m_TrianglesVertexIndices[index]].position);
 
 		out.position.x = out.position.x / (ratio * m_Camera.fov * out.position.z);
 		out.position.y = out.position.y / (m_Camera.fov * out.position.z);
@@ -81,37 +81,81 @@ bool Renderer::SaveBufferToImage() const
 	return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
 }
 
-void Renderer::Render_W1_Part1()
+void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<int>& trianglesVertexIndices)
 {
-	
-	std::vector<Vertex> vertices_ndc
-	{
-		{ {  0.0f,  2.0f,  0.0f }, colors::Red },
-		{ {  1.5f, -1.0f,  0.0f }, colors::Red },
-		{ { -1.5f, -1.0f,  0.0f }, colors::Red },
-		{ {  0.0f,  4.0f,  2.0f }, colors::Red	 },
-		{ {  3.0f, -2.0f,  2.0f }, colors::Green },
-		{ { -3.0f, -2.0f,  2.0f }, colors::Blue  },
+//#pragma region W6
+//	verticesNDC.clear();
+//	trianglesVertexIndices.clear();
+//
+//	verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
+//	verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
+//	verticesNDC.push_back({ { -1.5f, -1.0f,  0.0f }, colors::Red });
+//
+//	verticesNDC.push_back({ {  0.0f,  4.0f,  2.0f }, colors::Red   });
+//	verticesNDC.push_back({ {  3.0f, -2.0f,  2.0f }, colors::Green });
+//	verticesNDC.push_back({ { -3.0f, -2.0f,  2.0f }, colors::Blue  });
+//
+//	trianglesVertexIndices.push_back(0);
+//	trianglesVertexIndices.push_back(1);
+//	trianglesVertexIndices.push_back(2);
+//	trianglesVertexIndices.push_back(3);
+//	trianglesVertexIndices.push_back(4);
+//	trianglesVertexIndices.push_back(5);
+//	trianglesVertexIndices.push_back(6);
+//#pragma endregion
+#pragma region W7
+	verticesNDC.clear();
+	trianglesVertexIndices.clear();
 
-	};
+	verticesNDC.push_back({ {-3,  3, -2}, colors::White });
+	verticesNDC.push_back({ { 0,  3, -2}, colors::White });
+	verticesNDC.push_back({ { 3,  3, -2}, colors::White });
+	verticesNDC.push_back({ {-3,  0, -2}, colors::White });
+	verticesNDC.push_back({ { 0,  0, -2}, colors::White });
+	verticesNDC.push_back({ { 3,  0, -2}, colors::White });
+	verticesNDC.push_back({ {-3, -3, -2}, colors::White });
+	verticesNDC.push_back({ { 0, -3, -2}, colors::White });
+	verticesNDC.push_back({ { 3, -3, -2}, colors::White });
 
-	int			verticesNDCSize	{ int(vertices_ndc.size()) };
+	trianglesVertexIndices.push_back(3);
+	trianglesVertexIndices.push_back(0);
+	trianglesVertexIndices.push_back(4);
+	trianglesVertexIndices.push_back(1);	
+	trianglesVertexIndices.push_back(5);
+	trianglesVertexIndices.push_back(2);
+
+	trianglesVertexIndices.push_back(2);
+	trianglesVertexIndices.push_back(6);
+
+	trianglesVertexIndices.push_back(6);
+	trianglesVertexIndices.push_back(3);
+	trianglesVertexIndices.push_back(7);
+	trianglesVertexIndices.push_back(4);
+	trianglesVertexIndices.push_back(8);
+	trianglesVertexIndices.push_back(5);
+
+#pragma endregion
+}
+
+void Renderer::Render_W7()
+{
+	InitializeTriangles(m_VerticesNDC, m_TrianglesVertexIndices);
+
 	float		totalWeight		{};
 	Vector2		v0v1			{};
 	Vector2		v0v2			{};
 	Vector2		pixel			{};
 	ColorRGB	finalColor		{};
-	verticesNDCSize -= vertices_ndc.size() % 3;
 
 	std::vector<Vertex> vertices_ScreenSpace{};
 	//vertices_ScreenSpace.resize(verticesNDCSize);
 	std::vector<float> vertices_weights{};
-	vertices_weights.resize(verticesNDCSize);
+	vertices_weights.resize(m_TrianglesVertexIndices.size());
 	
-	VertexTransformationFunction(vertices_ndc, vertices_ScreenSpace);
+	VertexTransformationFunction(m_VerticesNDC, vertices_ScreenSpace);
 
 	//RENDER LOGIC
-	for (int vertexIndex{}; vertexIndex < verticesNDCSize; vertexIndex += 3)
+	for (int vertexIndex{}; vertexIndex < (m_TrianglesVertexIndices.size()-2); vertexIndex++)
 	{
 		int minX = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
 		int minY = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
@@ -136,8 +180,8 @@ void Renderer::Render_W1_Part1()
 					vertices_weights[vertexIndex + 1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 2].position.GetXY() - vertices_ScreenSpace[vertexIndex + 1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 1].position.GetXY());
 					vertices_weights[vertexIndex + 2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY() - vertices_ScreenSpace[vertexIndex + 2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + 2].position.GetXY());
 
-					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 /*or
-						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0*/)
+					if (vertices_weights[vertexIndex + 0] > 0 and vertices_weights[vertexIndex + 1] > 0 and vertices_weights[vertexIndex + 2] > 0 or
+						vertices_weights[vertexIndex + 0] < 0 and vertices_weights[vertexIndex + 1] < 0 and vertices_weights[vertexIndex + 2] < 0)
 					{
 						totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
 						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color)/ totalWeight;
@@ -160,4 +204,3 @@ void Renderer::Render_W1_Part1()
 	}
 
 }
-
