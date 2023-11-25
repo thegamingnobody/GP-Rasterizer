@@ -54,5 +54,7 @@ namespace dae
 
 		std::vector<Vertex> m_VerticesNDC;
 		std::vector<int> m_TrianglesVertexIndices;
+
+		Texture* m_Texture;
 	};
 }

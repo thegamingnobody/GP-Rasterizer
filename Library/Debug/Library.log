@@ -1,0 +1,13 @@
+﻿  Matrix.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Library\src\Matrix.cpp(298,1): fatal  error C1010: unexpected end of file while looking for precompiled header. Did you forget to add '#include "pch.h"' to your source?
+  Texture.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Library\src\Texture.cpp(41,1): fatal  error C1010: unexpected end of file while looking for precompiled header. Did you forget to add '#include "pch.h"' to your source?
+  Timer.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Library\src\Timer.cpp(85,1): fatal  error C1010: unexpected end of file while looking for precompiled header. Did you forget to add '#include "pch.h"' to your source?
+  Vector2.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Library\src\Vector2.cpp(127,1): fatal  error C1010: unexpected end of file while looking for precompiled header. Did you forget to add '#include "pch.h"' to your source?
+  Vector3.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Library\src\Vector3.cpp(176,1): fatal  error C1010: unexpected end of file while looking for precompiled header. Did you forget to add '#include "pch.h"' to your source?
+  Vector4.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Library\src\Vector4.cpp(110,1): fatal  error C1010: unexpected end of file while looking for precompiled header. Did you forget to add '#include "pch.h"' to your source?
+  Generating Code...

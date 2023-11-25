@@ -1,6 +1,7 @@
 #include "Texture.h"
 #include "Vector2.h"
 #include <SDL_image.h>
+#include <iostream>
 
 namespace dae
 {
@@ -24,15 +25,43 @@ namespace dae
 		//TODO
 		//Load SDL_Surface using IMG_LOAD
 		//Create & Return a new Texture Object (using SDL_Surface)
+		SDL_Surface* imageSurface = IMG_Load(path.c_str());
+		Texture* texture{};
+		if (imageSurface)
+		{
+			texture = new Texture{ imageSurface };
+		}
+		else
+		{
+			std::cout << "Texture not found\n";
+		}
 
-		return nullptr;
+		return texture;
 	}
 
 	ColorRGB Texture::Sample(const Vector2& uv) const
 	{
 		//TODO
 		//Sample the correct texel for the given uv
+		ColorRGB result{};
+		uint8_t r{};
+		uint8_t g{};
+		uint8_t b{};
+		//int x{ static_cast<int>((m_pSurface->h - 1) * uv.x) };
+		//int y{ static_cast<int>((m_pSurface->w - 1) * uv.y) };
+		float u = std::clamp(uv.x, 0.0f, 1.0f);
+		float v = std::clamp(uv.y, 0.0f, 1.0f);
+		size_t px = static_cast<size_t>(u * m_pSurface->w);
+		size_t py = static_cast<size_t>(v * m_pSurface->h);
 
-		return {};
+		uint32_t pixel = (m_pSurfacePixels[(py * m_pSurface->w) + px]); 
+
+		SDL_GetRGB(pixel, m_pSurface->format, &r, &g, &b);
+
+		result.r = r/255.0f;
+		result.g = g/255.0f;
+		result.b = b/255.0f;
+
+		return result;
 	}
 }

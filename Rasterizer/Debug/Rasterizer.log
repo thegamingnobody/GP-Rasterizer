@@ -1,0 +1,5 @@
+﻿  main.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Rasterizer\src\main.cpp(3,10): fatal  error C1083: Cannot open include file: 'SDL.h': No such file or directory
+  Renderer.cpp
+C:\Users\mestd\Documents\seppe\school\Howest\2023-2024\Semester1\GraphicsProgramming1\GP-Rasterizer\Rasterizer\src\Renderer.cpp(2,10): fatal  error C1083: Cannot open include file: 'SDL.h': No such file or directory
+  Generating Code...

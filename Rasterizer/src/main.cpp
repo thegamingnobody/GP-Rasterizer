@@ -11,6 +11,10 @@
 #include "Timer.h"
 #include "Renderer.h"
 
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
 using namespace dae;
 
 void ShutDown(SDL_Window* pWindow)
@@ -103,5 +107,8 @@ int main(int argc, char* args[])
 	delete pTimer;
 
 	ShutDown(pWindow);
+
+	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+	_CrtDumpMemoryLeaks();
 	return 0;
 }
