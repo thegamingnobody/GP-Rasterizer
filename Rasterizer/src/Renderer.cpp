@@ -170,10 +170,11 @@ void Renderer::Render_W7()
 		int maxX = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
 		int maxY = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
 
-		minX = std::clamp(minX, 0, m_Width) - 5;
-		maxX = std::clamp(maxX, 0, m_Width) + 5;
-		minY = std::clamp(minY, 0, m_Height) - 5;
-		maxY = std::clamp(maxY, 0, m_Height) + 5;
+		int offset{ 5 };
+		minX = std::clamp(minX, offset, m_Width - offset) - 5;
+		maxX = std::clamp(maxX, offset, m_Width - offset) + 5;
+		minY = std::clamp(minY, offset, m_Height - offset) - 5;
+		maxY = std::clamp(maxY, offset, m_Height - offset) + 5;
 
 		if (vertexIndex & 1)
 		{
@@ -214,8 +215,6 @@ void Renderer::Render_W7()
 						Vector2 interpolatedUV = (((vertices_ScreenSpace[vertexIndex + 0].uv				/ vertices_ScreenSpace[vertexIndex + 0].position.z)					* vertices_weights[vertexIndex + swapOddVertices1])	+
 												  ((vertices_ScreenSpace[vertexIndex + swapOddVertices1].uv	/ vertices_ScreenSpace[vertexIndex + swapOddVertices1].position.z)	* vertices_weights[vertexIndex + swapOddVertices2]) +
 												  ((vertices_ScreenSpace[vertexIndex + swapOddVertices2].uv	/ vertices_ScreenSpace[vertexIndex + swapOddVertices2].position.z)	* vertices_weights[vertexIndex + 0])) * interpolatedZ;
-						float test{ interpolatedUV.x };
-						float test2{ interpolatedUV.y };
 						finalColor = m_Texture->Sample(interpolatedUV);
 					}
 					else
