@@ -44,6 +44,7 @@ namespace dae
 		PrimitiveTopology primitiveTopology{ PrimitiveTopology::TriangleStrip };
 
 		std::vector<Vertex_Out> vertices_out{};
+		std::vector<bool> isVertex_outInScreenSpace{};
 		Matrix worldMatrix{};
 
 		Matrix rotationTransform{};

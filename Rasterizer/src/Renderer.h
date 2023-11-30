@@ -16,6 +16,7 @@ namespace dae
 	struct Vertex_Out;
 	class Timer;
 	class Scene;
+	enum class PrimitiveTopology;
 
 	class Renderer final
 	{
@@ -41,6 +42,16 @@ namespace dae
 
 		void RenderStrip(int vertexIndex, float interpolatedZ, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights, bool isStrip);
 		void RenderList(int vertexIndex, float interpolatedZ, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights);
+		
+		bool CheckCulling(const int vertexIndex);
+
+		void CalculateBoundingBox(int& minX, int& maxX, int& minY, int& maxY, const int vertexIndex);
+
+		void ConvertToScreenSpace(const int vertexIndex);
+
+		float DepthRemap(const float value, const float fromMin, const float fromMax);
+
+		void ToggleDepthBufferVisuals();
 	private:
 		SDL_Window* m_pWindow{};
 
@@ -58,5 +69,7 @@ namespace dae
 		Texture* m_Texture;
 
 		Mesh* m_Mesh = nullptr;
+
+		bool m_ShowDepthBuffer = false;
 	};
 }

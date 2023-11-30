@@ -95,7 +95,7 @@ namespace dae
 
 			//Camera Update Logic
 			//...
-			const float movementSpeed{ 5.f * deltaTime };
+			const float movementSpeed{ 7.5f * deltaTime };
 
 			//Keyboard Input
 			const uint8_t* pKeyboardState = SDL_GetKeyboardState(nullptr);

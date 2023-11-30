@@ -7,6 +7,7 @@
 #include "Maths.h"
 #include "Texture.h"
 #include "Utils.h"
+#include <iostream>
 
 using namespace dae;
 
@@ -26,17 +27,23 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	//Initialize Camera
 	m_Camera.Initialize(60.f, { 0.0f,.0f,-10.f }, (static_cast<float>(m_Width) / m_Height));
 
-	m_Texture = m_Texture->LoadFromFile("Resources/tuktuk.png");
-
 	m_Mesh = new Mesh();
 
+	//m_Texture = m_Texture->LoadFromFile("Resources/uv_grid_2.png");
 	//InitializeTriangles(m_Mesh->vertices, m_Mesh->indices);
-	Utils::ParseOBJ("Resources/tuktuk.obj", m_Mesh->vertices, m_Mesh->indices);
+
+	//m_Texture = m_Texture->LoadFromFile("Resources/tuktuk.png");
+	//Utils::ParseOBJ("Resources/tuktuk.obj", m_Mesh->vertices, m_Mesh->indices);
+	//m_Mesh->primitiveTopology = PrimitiveTopology::TriangleList;
+
+	m_Texture = m_Texture->LoadFromFile("Resources/vehicle_diffuse.png");
+	Utils::ParseOBJ("Resources/vehicle.obj", m_Mesh->vertices, m_Mesh->indices);
 	m_Mesh->primitiveTopology = PrimitiveTopology::TriangleList;
 
-	const Vector3 translation{ 0.0f, -5.0f, 10.0f };
-	m_Mesh->Translate(translation);
+	m_Mesh->isVertex_outInScreenSpace.resize(m_Mesh->indices.size());
 
+	const Vector3 translation{ 0.0f, -5.0f, 30.0f };
+	m_Mesh->Translate(translation);
 }
 
 Renderer::~Renderer()
@@ -72,8 +79,6 @@ void Renderer::Render()
 void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const
 {
 	//Todo > W1 Projection Stage
-	float ratio{ float(m_Width) / m_Height };
-	float fovTimesZ{};
 	Vertex_Out out{};
 
 	Matrix finalMatrix = m_Mesh->worldMatrix * m_Camera.viewMatrix * m_Camera.projectionMatrix;
@@ -86,13 +91,9 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 		out.uv = vertices_in[m_Mesh->indices[index]].uv;
 		out.position = finalMatrix.TransformPoint(vertices_in[m_Mesh->indices[index]].position.ToPoint4());
 
-		fovTimesZ = m_Camera.fov * out.position.z;
-
-		out.position.x = out.position.x / out.position.z;
-		out.position.y = out.position.y / out.position.z;
-
-		out.position.x = ((out.position.x + 1) / 2) * float(m_Width);
-		out.position.y = ((1 - out.position.y) / 2) * float(m_Height);
+		out.position.x = out.position.x / out.position.w;
+		out.position.y = out.position.y / out.position.w;
+		out.position.z = out.position.z / out.position.w;
 
 		vertices_out[index] = out;
 	}
@@ -160,25 +161,33 @@ void Renderer::Render_W7()
 	case PrimitiveTopology::TriangleList:
 		for (int vertexIndex{}; vertexIndex < m_Mesh->indices.size(); vertexIndex+=3)
 		{
-			if (m_Mesh->vertices_out[vertexIndex].position.w < 0 or m_Mesh->vertices_out[vertexIndex + 1].position.w < 0 or m_Mesh->vertices_out[vertexIndex + 2].position.w < 0)
+			if (CheckCulling(vertexIndex))
 			{
 				continue;
 			}
+
+			ConvertToScreenSpace(vertexIndex);
 			RenderList(vertexIndex, interpolatedZ, totalWeight, pixel, interpolatedUV, finalColor, swapOddVertices1, swapOddVertices2, pixelIndex, vertices_weights);
 		}
 		break;
 	case PrimitiveTopology::TriangleStrip:
 		for (int vertexIndex{}; vertexIndex < (m_Mesh->indices.size() - 2); vertexIndex++)
 		{
-			if (m_Mesh->vertices_out[vertexIndex].position.w < 0 or m_Mesh->vertices_out[vertexIndex + 1].position.w < 0 or m_Mesh->vertices_out[vertexIndex + 2].position.w < 0)
+			if (CheckCulling(vertexIndex))
 			{
 				continue;
 			}
+
+			ConvertToScreenSpace(vertexIndex);
 			RenderStrip(vertexIndex, interpolatedZ, totalWeight, pixel, interpolatedUV, finalColor, swapOddVertices1, swapOddVertices2, pixelIndex, vertices_weights, true);
 		}
 		break;
 	}
 
+	for (int i = 0; i < m_Mesh->isVertex_outInScreenSpace.size(); i++)
+	{
+		m_Mesh->isVertex_outInScreenSpace[i] = false;
+	}
 }
 
 void Renderer::RenderList(int vertexIndex, float interpolatedZ, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights)
@@ -188,21 +197,11 @@ void Renderer::RenderList(int vertexIndex, float interpolatedZ, float totalWeigh
 
 void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights, bool isStrip = true)
 {
-	if (m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 1] or m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 2] or m_Mesh->indices[vertexIndex + 1] == m_Mesh->indices[vertexIndex + 2])
-	{
-		return;
-	}
+	if (m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 1] or m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 2] or m_Mesh->indices[vertexIndex + 1] == m_Mesh->indices[vertexIndex + 2]) return;
 
-	int minX = int(std::min({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
-	int minY = int(std::min({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
-	int maxX = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
-	int maxY = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
-
-	int offset{ 5 };
-	minX = std::clamp(minX, offset, m_Width - offset) - 5;
-	maxX = std::clamp(maxX, offset, m_Width - offset) + 5;
-	minY = std::clamp(minY, offset, m_Height - offset) - 5;
-	maxY = std::clamp(maxY, offset, m_Height - offset) + 5;
+	int minX{}, maxX{}, minY{}, maxY{};
+	
+	CalculateBoundingBox(minX, maxX, minY, maxY, vertexIndex);
 
 	//these are used to swap the orientation of triangles in the strip to all face the correct side
 	//if these are not used and + 1 or + 2 is written istead, that should mean that the order/position of the numbers doesn't really matter
@@ -226,6 +225,7 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float totalWeig
 			pixel = Vector2(px + 0.5f, py + 0.5f);
 			pixelIndex = px + (py * m_Width);
 
+
 			if (m_pDepthBufferPixels[pixelIndex] > m_Mesh->vertices_out[vertexIndex].position.z)
 			{
 				//initial weight calculation
@@ -242,34 +242,29 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float totalWeig
 				vertices_weights[vertexIndex + swapOddVertices2] /= totalWeight;
 				totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
 
-				//if there is a texture, display is, else display the vertex colors
-				if (m_Texture)
+				interpolatedZ = 1 / ((vertices_weights[vertexIndex + 0]				   / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) + 
+									 (vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.z) + 
+									 (vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z));					
+			
+				if (m_pDepthBufferPixels[pixelIndex] < interpolatedZ)
 				{
-					interpolatedZ = 1 / ((vertices_weights[vertexIndex + 0] / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) + (vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.z) + (vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z));					
-					if (interpolatedZ >= 0.0f and interpolatedZ <= 1.0f)
-					{
-						interpolatedUV = (((m_Mesh->vertices_out[vertexIndex + 0].uv / m_Mesh->vertices_out[vertexIndex + 0].position.z) * vertices_weights[vertexIndex + swapOddVertices1]) +
-							((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z) * vertices_weights[vertexIndex + swapOddVertices2]) +
-							((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) * vertices_weights[vertexIndex + 0])) * interpolatedZ;
-						//if (interpolatedUV.x < 0.0f or interpolatedUV.x > 1.0f or interpolatedUV.y < 0.0f or interpolatedUV.y > 1.0f)
-						//{
-						//	continue;
-						//}
-						finalColor = m_Texture->Sample(interpolatedUV);
-					}
-				}
-				else
-				{
-					finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * m_Mesh->vertices_out[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * m_Mesh->vertices_out[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * m_Mesh->vertices_out[vertexIndex + 2].color);
+					continue;
 				}
 
-				if (AreEqual(interpolatedZ, 0))
+				m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
+
+				//if there is a texture, display is, else display the vertex colors
+				if (m_Texture and !m_ShowDepthBuffer)
 				{
-					m_pDepthBufferPixels[pixelIndex] = m_Mesh->vertices_out[vertexIndex].position.z;
+					interpolatedUV = (((m_Mesh->vertices_out[vertexIndex + 0].uv				/ m_Mesh->vertices_out[vertexIndex + 0].position.z)				   * vertices_weights[vertexIndex + swapOddVertices1]) +
+									  ((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z) * vertices_weights[vertexIndex + swapOddVertices2]) +
+									  ((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) * vertices_weights[vertexIndex + 0])) * interpolatedZ;
+					finalColor = m_Texture->Sample(interpolatedUV);
 				}
 				else
 				{
-					m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
+					auto depthColorValue{ DepthRemap(interpolatedZ, 0.95f, 1.0f) };
+					finalColor = ColorRGB(depthColorValue, depthColorValue, depthColorValue);
 				}
 
 				//Update Color in Buffer
@@ -283,5 +278,69 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float totalWeig
 			}
 		}
 	}
+}
 
+bool Renderer::CheckCulling(const int vertexIndex)
+{
+	const int frustumOffset{ 2 };
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (m_Mesh->isVertex_outInScreenSpace[vertexIndex + i] == false)
+		{
+			if (m_Mesh->vertices_out[vertexIndex + i].position.x < -frustumOffset or m_Mesh->vertices_out[vertexIndex + i].position.x > frustumOffset or
+				m_Mesh->vertices_out[vertexIndex + i].position.y < -frustumOffset or m_Mesh->vertices_out[vertexIndex + i].position.y > frustumOffset or
+				m_Mesh->vertices_out[vertexIndex + i].position.z < 0			  or m_Mesh->vertices_out[vertexIndex + i].position.z > frustumOffset)
+			{
+				return true;
+			}
+		}
+	}
+
+	if (m_Mesh->vertices_out[vertexIndex].position.w < 0 or m_Mesh->vertices_out[vertexIndex + 1].position.w < 0 or m_Mesh->vertices_out[vertexIndex + 2].position.w < 0)
+	{
+		return true;
+	}
+	
+	return false;
+}
+
+void Renderer::CalculateBoundingBox(int& minX, int& maxX, int& minY, int& maxY, const int vertexIndex)
+{
+	minX = int(std::min({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
+	minY = int(std::min({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
+	maxX = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
+	maxY = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
+
+	int offset{ 5 };
+	minX = std::clamp(minX, offset, m_Width - offset)  - offset;
+	maxX = std::clamp(maxX, offset, m_Width - offset)  + offset;
+	minY = std::clamp(minY, offset, m_Height - offset) - offset;
+	maxY = std::clamp(maxY, offset, m_Height - offset) + offset;
+
+}
+
+void Renderer::ConvertToScreenSpace(const int vertexIndex)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (m_Mesh->isVertex_outInScreenSpace[vertexIndex + i] == false)
+		{
+			m_Mesh->vertices_out[vertexIndex + i].position.x = ((m_Mesh->vertices_out[vertexIndex + i].position.x + 1) / 2) * float(m_Width);
+			m_Mesh->vertices_out[vertexIndex + i].position.y = ((1 - m_Mesh->vertices_out[vertexIndex + i].position.y) / 2) * float(m_Height);
+			m_Mesh->isVertex_outInScreenSpace[vertexIndex + i] = true;
+		}
+	}
+}
+
+float Renderer::DepthRemap(const float value, const float fromMin, const float fromMax)
+{
+	float normalizedValue{ (value - fromMin) / (fromMax - fromMin) };
+
+	return normalizedValue;
+}
+
+void Renderer::ToggleDepthBufferVisuals()
+{
+	m_ShowDepthBuffer = !m_ShowDepthBuffer;
 }
