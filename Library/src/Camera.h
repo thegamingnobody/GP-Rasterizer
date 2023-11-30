@@ -12,16 +12,20 @@ namespace dae
 	{
 		Camera() = default;
 
-		Camera(const Vector3& _origin, float _fovAngle):
+		Camera(const Vector3& _origin, float _fovAngle, float aspectRatio):
 			origin{_origin},
-			fovAngle{_fovAngle}
+			fovAngle{_fovAngle},
+			ratio{aspectRatio}
 		{
 		}
-
 
 		Vector3 origin{};
 		float fovAngle{90.f};
 		float fov{ tanf((fovAngle * TO_RADIANS) / 2.f) };
+		float fovCheck{ fov };
+		float ratio{};
+		float nearPlane{ 1.0f };
+		float farPlane{ 1000.0f };
 
 		Vector3 forward{Vector3::UnitZ};
 		Vector3 up{Vector3::UnitY};
@@ -32,16 +36,20 @@ namespace dae
 
 		Matrix invViewMatrix{};
 		Matrix viewMatrix{};
+		Matrix projectionMatrix{};
+		Matrix worldViewProjectionMatrix{};
 
 		float m_CameraMovementSpeed{ 10.0f };
 		float m_CameraRotationSpeed{ 4.0f };
 
-		void Initialize(float _fovAngle = 90.f, Vector3 _origin = {0.f,0.f,0.f})
+		void Initialize(float _fovAngle = 90.f, Vector3 _origin = {0.f,0.f,0.f}, float aspectRatio = 1.0f)
 		{
 			fovAngle = _fovAngle;
 			fov = tanf((fovAngle * TO_RADIANS) / 2.f);
 
 			origin = _origin;
+
+			ratio = aspectRatio;
 		}
 
 		void CalculateViewMatrix()
@@ -52,8 +60,8 @@ namespace dae
 
 			//invViewMatrix = Matrix::CreateLookAtLH(origin, forward, up);
 
-			auto translation = Matrix::CreateTranslation(origin);
-			auto rotation = Matrix::CreateRotationX(totalPitch) * Matrix::CreateRotationY(totalYaw);
+			Matrix translation = Matrix::CreateTranslation(origin);
+			Matrix rotation = Matrix::CreateRotationX(totalPitch) * Matrix::CreateRotationY(totalYaw);
 
 			invViewMatrix = rotation * translation;
 			viewMatrix = invViewMatrix.Inverse();
@@ -70,7 +78,12 @@ namespace dae
 
 		void CalculateProjectionMatrix()
 		{
-			//TODO W3
+			//TODO W3		
+
+			projectionMatrix = { { 1 / (ratio * fov),	0,		 0,												0 },
+								 { 0,					1 / fov, 0,												0 },
+								 { 0,					0,		 farPlane / (farPlane-nearPlane),				1 },
+								 { 0,					0,		 -(farPlane*nearPlane) / (farPlane-nearPlane),	0 }};
 
 			//ProjectionMatrix => Matrix::CreatePerspectiveFovLH(...) [not implemented yet]
 			//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixperspectivefovlh
@@ -146,7 +159,12 @@ namespace dae
 
 			//Update Matrices
 			CalculateViewMatrix();
-			CalculateProjectionMatrix(); //Try to optimize this - should only be called once or when fov/aspectRatio changes
+			if (fovCheck != fov)
+			{
+				fovCheck = fov;
+				CalculateProjectionMatrix(); //Try to optimize this - should only be called once or when fov/aspectRatio changes
+			}
+
 		}
 	};
 }

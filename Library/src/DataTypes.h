@@ -16,6 +16,13 @@ namespace dae
 
 	struct Vertex_Out
 	{
+		Vertex_Out() = default;
+		Vertex_Out(const Vertex& vertex)
+		{
+			position = vertex.position.ToPoint4();
+			color = vertex.color;
+			uv = vertex.uv;
+		}
 		Vector4 position{};
 		ColorRGB color{ colors::White };
 		Vector2 uv{};
@@ -38,5 +45,29 @@ namespace dae
 
 		std::vector<Vertex_Out> vertices_out{};
 		Matrix worldMatrix{};
+
+		Matrix rotationTransform{};
+		Matrix translationTransform{};
+		Matrix scaleTransform{};
+
+		void Translate(const Vector3& translation)
+		{
+			translationTransform = Matrix::CreateTranslation(translation);
+		}
+
+		void RotateY(float yaw)
+		{
+			rotationTransform = Matrix::CreateRotationY(yaw);
+		}
+
+		void Scale(const Vector3& scale)
+		{
+			scaleTransform = Matrix::CreateScale(scale);
+		}
+
+		void Update()
+		{
+			worldMatrix = scaleTransform * rotationTransform * translationTransform;
+		}
 	};
 }

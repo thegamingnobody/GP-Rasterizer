@@ -13,6 +13,7 @@ namespace dae
 	class Texture;
 	struct Mesh;
 	struct Vertex;
+	struct Vertex_Out;
 	class Timer;
 	class Scene;
 
@@ -32,11 +33,11 @@ namespace dae
 
 		bool SaveBufferToImage() const;
 
-		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const;
+		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const;
 
 		void Render_W7();
 
-		void InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<int>& trianglesVertexIndices);
+		void InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<uint32_t>& trianglesVertexIndices);
 
 	private:
 		SDL_Window* m_pWindow{};
@@ -52,9 +53,8 @@ namespace dae
 		int m_Width{};
 		int m_Height{};
 
-		std::vector<Vertex> m_VerticesNDC;
-		std::vector<int> m_TrianglesVertexIndices;
-
 		Texture* m_Texture;
+
+		Mesh* m_Mesh = nullptr;
 	};
 }

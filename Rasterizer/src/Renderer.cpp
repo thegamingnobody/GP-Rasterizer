@@ -24,9 +24,16 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 	//Initialize Camera
-	m_Camera.Initialize(60.f, { 0.0f,.0f,-10.f });
+	m_Camera.Initialize(60.f, { 0.0f,.0f,-10.f }, (static_cast<float>(m_Width) / m_Height));
 
 	m_Texture = m_Texture->LoadFromFile("Resources/uv_grid_2.png");
+
+	m_Mesh = new Mesh();
+
+	InitializeTriangles(m_Mesh->vertices, m_Mesh->indices);
+
+	const Vector3 translation{ 0.0f, 0.0f, 0.0f };
+	m_Mesh->Translate(translation);
 }
 
 Renderer::~Renderer()
@@ -40,6 +47,8 @@ void Renderer::Update(Timer* pTimer)
 
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
 	std::fill_n(m_pBackBufferPixels, m_Width * m_Height, 0);
+
+	m_Mesh->Update();
 }
 
 void Renderer::Render()
@@ -57,25 +66,30 @@ void Renderer::Render()
 	SDL_UpdateWindowSurface(m_pWindow);
 }
 
-void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const
+void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const
 {
 	//Todo > W1 Projection Stage
-	float ratio{ static_cast<float>(m_Width) / m_Height };
+	float ratio{ float(m_Width) / m_Height };
+	float fovTimesZ{};
+	Vertex_Out out{};
 
-	for (int index = 0; index < m_TrianglesVertexIndices.size(); index++)
+	Matrix finalMatrix = m_Mesh->worldMatrix * m_Camera.viewMatrix * m_Camera.projectionMatrix;
+
+	for (int index = 0; index < m_Mesh->indices.size(); index++)
 	{
-		Vertex out{};
-		out.color = vertices_in[m_TrianglesVertexIndices[index]].color;
-		out.uv = vertices_in[m_TrianglesVertexIndices[index]].uv;
-		out.position = m_Camera.viewMatrix.TransformPoint(vertices_in[m_TrianglesVertexIndices[index]].position);
+		out.color = vertices_in[m_Mesh->indices[index]].color;
+		out.uv = vertices_in[m_Mesh->indices[index]].uv;
+		out.position = finalMatrix.TransformPoint(vertices_in[m_Mesh->indices[index]].position.ToPoint4());
 
-		out.position.x = out.position.x / ((ratio) * m_Camera.fov * out.position.z);
-		out.position.y = out.position.y / (m_Camera.fov * out.position.z);
+		fovTimesZ = m_Camera.fov * out.position.z;
 
-		out.position.x = ((out.position.x + 1) / 2) * static_cast<float>(m_Width);
-		out.position.y = ((1 - out.position.y) / 2) * static_cast<float>(m_Height);
+		out.position.x = out.position.x / out.position.z;
+		out.position.y = out.position.y / out.position.z;
 
-		vertices_out.push_back(out);
+		out.position.x = ((out.position.x + 1) / 2) * float(m_Width);
+		out.position.y = ((1 - out.position.y) / 2) * float(m_Height);
+
+		vertices_out[index] = out;
 	}
 }
 
@@ -84,91 +98,69 @@ bool Renderer::SaveBufferToImage() const
 	return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
 }
 
-void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<int>& trianglesVertexIndices)
+void Renderer::InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<uint32_t>& trianglesVertexIndices)
 {
-	verticesNDC.clear();
-	trianglesVertexIndices.clear();
-#pragma region W6
-
-	//verticesNDC.push_back({ {  0.0f,  2.0f,  0.0f }, colors::Red });
-	//verticesNDC.push_back({ {  1.5f, -1.0f,  0.0f }, colors::Red });
-	//verticesNDC.push_back({ { -1.5f, -1.0f,  0.0f }, colors::Red });
-
-	//verticesNDC.push_back({ {  0.0f,  4.0f,  2.0f }, colors::Red   });
-	//verticesNDC.push_back({ {  3.0f, -2.0f,  2.0f }, colors::Green });
-	//verticesNDC.push_back({ { -3.0f, -2.0f,  2.0f }, colors::Blue  });
-
-	//trianglesVertexIndices.push_back(0);
-	//trianglesVertexIndices.push_back(1);
-	//trianglesVertexIndices.push_back(2);
-	//trianglesVertexIndices.push_back(2);
-	//trianglesVertexIndices.push_back(3);
-	//trianglesVertexIndices.push_back(3);
-	//trianglesVertexIndices.push_back(4);
-	//trianglesVertexIndices.push_back(5);
-#pragma endregion
-
 #pragma region W7
-	verticesNDC.push_back({ {-3,  3, -2}, colors::White, { 0.0f,  0.0f} }) ;
-	verticesNDC.push_back({ { 0,  3, -2}, colors::White, { 0.5f,  0.0f} });
-	verticesNDC.push_back({ { 3,  3, -2}, colors::White, { 1.0f,  0.0f} });
-	verticesNDC.push_back({ {-3,  0, -2}, colors::White, { 0.0f,  0.5f} }) ;
-	verticesNDC.push_back({ { 0,  0, -2}, colors::White, { 0.5f,  0.5f} }) ;
-	verticesNDC.push_back({ { 3,  0, -2}, colors::White, { 1.0f,  0.5f} });
-	verticesNDC.push_back({ {-3, -3, -2}, colors::White, { 0.0f,  1.0f} });
-	verticesNDC.push_back({ { 0, -3, -2}, colors::White, { 0.5f,  1.0f} });
-	verticesNDC.push_back({ { 3, -3, -2}, colors::White, { 1.0f,  1.0f} });
+	m_Mesh->vertices.push_back({ {-3,  3, -2}, colors::White, { 0.0f,  0.0f} });
+	m_Mesh->vertices.push_back({ { 0,  3, -2}, colors::White, { 0.5f,  0.0f} });
+	m_Mesh->vertices.push_back({ { 3,  3, -2}, colors::White, { 1.0f,  0.0f} });
+	m_Mesh->vertices.push_back({ {-3,  0, -2}, colors::White, { 0.0f,  0.5f} });
+	m_Mesh->vertices.push_back({ { 0,  0, -2}, colors::White, { 0.5f,  0.5f} });
+	m_Mesh->vertices.push_back({ { 3,  0, -2}, colors::White, { 1.0f,  0.5f} });
+	m_Mesh->vertices.push_back({ {-3, -3, -2}, colors::White, { 0.0f,  1.0f} });
+	m_Mesh->vertices.push_back({ { 0, -3, -2}, colors::White, { 0.5f,  1.0f} });
+	m_Mesh->vertices.push_back({ { 3, -3, -2}, colors::White, { 1.0f,  1.0f} });
 
-	trianglesVertexIndices.push_back(3);
-	trianglesVertexIndices.push_back(0); 
-	trianglesVertexIndices.push_back(4);
-	trianglesVertexIndices.push_back(1);	
-	trianglesVertexIndices.push_back(5);
-	trianglesVertexIndices.push_back(2);
+	m_Mesh->indices.push_back(3);
+	m_Mesh->indices.push_back(0); 
+	m_Mesh->indices.push_back(4);
+	m_Mesh->indices.push_back(1);	
+	m_Mesh->indices.push_back(5);
+	m_Mesh->indices.push_back(2);
 
-	trianglesVertexIndices.push_back(2);
-	trianglesVertexIndices.push_back(6);
+	m_Mesh->indices.push_back(2);
+	m_Mesh->indices.push_back(6);
 
-	trianglesVertexIndices.push_back(6);
-	trianglesVertexIndices.push_back(3);
-	trianglesVertexIndices.push_back(7);
-	trianglesVertexIndices.push_back(4);
-	trianglesVertexIndices.push_back(8);
-	trianglesVertexIndices.push_back(5);
+	m_Mesh->indices.push_back(6);
+	m_Mesh->indices.push_back(3);
+	m_Mesh->indices.push_back(7);
+	m_Mesh->indices.push_back(4);
+	m_Mesh->indices.push_back(8);
+	m_Mesh->indices.push_back(5);
 
 #pragma endregion
+
+	m_Mesh->vertices_out.resize(m_Mesh->indices.size());
 }
 
 void Renderer::Render_W7()
 {
-	InitializeTriangles(m_VerticesNDC, m_TrianglesVertexIndices);
-
+	float		interpolatedZ	{};
 	float		totalWeight		{};
-	Vector2		v0v1			{};
-	Vector2		v0v2			{};
 	Vector2		pixel			{};
+	Vector2		interpolatedUV	{};
 	ColorRGB	finalColor		{};
 	int swapOddVertices1		{};
 	int swapOddVertices2		{};
+	int pixelIndex				{};
 
-	std::vector<Vertex> vertices_ScreenSpace{};
 	std::vector<float> vertices_weights{};
-	vertices_weights.resize(m_TrianglesVertexIndices.size());
+	vertices_weights.resize(m_Mesh->indices.size());
 	
-	VertexTransformationFunction(m_VerticesNDC, vertices_ScreenSpace);
+	VertexTransformationFunction(m_Mesh->vertices, m_Mesh->vertices_out);
 
 	//RENDER LOGIC
-	for (int vertexIndex{}; vertexIndex < (m_TrianglesVertexIndices.size()-2); vertexIndex++)
+	for (int vertexIndex{}; vertexIndex < (m_Mesh->indices.size()-2); vertexIndex++)
 	{
-		if (m_TrianglesVertexIndices[vertexIndex + 0] == m_TrianglesVertexIndices[vertexIndex + 1] or m_TrianglesVertexIndices[vertexIndex + 0] == m_TrianglesVertexIndices[vertexIndex + 2] or m_TrianglesVertexIndices[vertexIndex + 1] == m_TrianglesVertexIndices[vertexIndex + 2])
+		if (m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 1] or m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 2] or m_Mesh->indices[vertexIndex + 1] == m_Mesh->indices[vertexIndex + 2])
 		{
 			continue;
 		}
 
-		int minX = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
-		int minY = int(std::min({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
-		int maxX = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.x, vertices_ScreenSpace[vertexIndex + 1].position.x, vertices_ScreenSpace[vertexIndex + 2].position.x }));
-		int maxY = int(std::max({ vertices_ScreenSpace[vertexIndex + 0].position.y, vertices_ScreenSpace[vertexIndex + 1].position.y, vertices_ScreenSpace[vertexIndex + 2].position.y }));
+		int minX = int(std::min({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
+		int minY = int(std::min({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
+		int maxX = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
+		int maxY = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
 
 		int offset{ 5 };
 		minX = std::clamp(minX, offset, m_Width - offset) - 5;
@@ -176,6 +168,9 @@ void Renderer::Render_W7()
 		minY = std::clamp(minY, offset, m_Height - offset) - 5;
 		maxY = std::clamp(maxY, offset, m_Height - offset) + 5;
 
+		//these are used to swap the orientation of triangles in the strip to all face the correct side
+		//if these are not used and + 1 or + 2 is written istead, that should mean that the order/position of the numbers doesn't really matter
+		//+ 0 is written purely for clarity
 		if (vertexIndex & 1)
 		{
 			swapOddVertices1 = 2;
@@ -193,51 +188,57 @@ void Renderer::Render_W7()
 			{
 				finalColor = ColorRGB(0.0f, 0.0f, 0.0f);
 				pixel = Vector2(px + 0.5f, py + 0.5f);
-				
-				if (m_pDepthBufferPixels[px + (py * m_Width)] > vertices_ScreenSpace[vertexIndex].position.z)
+				pixelIndex = px + (py * m_Width);
+
+				if (m_pDepthBufferPixels[pixelIndex] > m_Mesh->vertices_out[vertexIndex].position.z)
 				{
-					vertices_weights[vertexIndex + 0]				 = Vector2::Cross(vertices_ScreenSpace[vertexIndex + swapOddVertices1].position.GetXY() - vertices_ScreenSpace[vertexIndex + 0].position.GetXY(),				 pixel - vertices_ScreenSpace[vertexIndex + 0].position.GetXY());
-					vertices_weights[vertexIndex + swapOddVertices1] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + swapOddVertices2].position.GetXY() - vertices_ScreenSpace[vertexIndex + swapOddVertices1].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + swapOddVertices1].position.GetXY());
-					vertices_weights[vertexIndex + swapOddVertices2] = Vector2::Cross(vertices_ScreenSpace[vertexIndex + 0].position.GetXY()				- vertices_ScreenSpace[vertexIndex + swapOddVertices2].position.GetXY(), pixel - vertices_ScreenSpace[vertexIndex + swapOddVertices2].position.GetXY());
+					//initial weight calculation
+					vertices_weights[vertexIndex + 0]				 = Vector2::Cross(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY() - m_Mesh->vertices_out[vertexIndex + 0].position.GetXY(),				 pixel - m_Mesh->vertices_out[vertexIndex + 0].position.GetXY());
+					vertices_weights[vertexIndex + swapOddVertices1] = Vector2::Cross(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY() - m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY(), pixel - m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY());
+					vertices_weights[vertexIndex + swapOddVertices2] = Vector2::Cross(m_Mesh->vertices_out[vertexIndex + 0].position.GetXY()				- m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY(), pixel - m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY());
 
 					if (vertices_weights[vertexIndex + 0] < 0 or vertices_weights[vertexIndex + 1] < 0 or vertices_weights[vertexIndex + 2] < 0) continue;
 
+					//normalize weights and calculate total weight
 					totalWeight = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
+					vertices_weights[vertexIndex + 0]				 /= totalWeight;
+					vertices_weights[vertexIndex + swapOddVertices1] /= totalWeight;
+					vertices_weights[vertexIndex + swapOddVertices2] /= totalWeight;
+					totalWeight	= vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
 
-					vertices_weights[vertexIndex + 0]				 = vertices_weights[vertexIndex + 0]				/ totalWeight;
-					vertices_weights[vertexIndex + swapOddVertices1] = vertices_weights[vertexIndex + swapOddVertices1] / totalWeight;
-					vertices_weights[vertexIndex + swapOddVertices2] = vertices_weights[vertexIndex + swapOddVertices2] / totalWeight;
-					totalWeight	  = vertices_weights[vertexIndex + 0] + vertices_weights[vertexIndex + 1] + vertices_weights[vertexIndex + 2];
-
-					float interpolatedZ = 1 / ((vertices_weights[vertexIndex + 0] / vertices_ScreenSpace[vertexIndex + swapOddVertices2].position.z) + (vertices_weights[vertexIndex + swapOddVertices1] / vertices_ScreenSpace[vertexIndex + 0].position.z) + (vertices_weights[vertexIndex + swapOddVertices2] / vertices_ScreenSpace[vertexIndex + swapOddVertices1].position.z));
+					//if there is a texture, display is, else display the vertex colors
 					if (m_Texture)
 					{
-						Vector2 interpolatedUV = (((vertices_ScreenSpace[vertexIndex + 0].uv				/ vertices_ScreenSpace[vertexIndex + 0].position.z)					* vertices_weights[vertexIndex + swapOddVertices1])	+
-												  ((vertices_ScreenSpace[vertexIndex + swapOddVertices1].uv	/ vertices_ScreenSpace[vertexIndex + swapOddVertices1].position.z)	* vertices_weights[vertexIndex + swapOddVertices2]) +
-												  ((vertices_ScreenSpace[vertexIndex + swapOddVertices2].uv	/ vertices_ScreenSpace[vertexIndex + swapOddVertices2].position.z)	* vertices_weights[vertexIndex + 0])) * interpolatedZ;
+						interpolatedZ = 1 / ((vertices_weights[vertexIndex + 0] / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) + (vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.z) + (vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z));
+						interpolatedUV = (((m_Mesh->vertices_out[vertexIndex + 0].uv				/ m_Mesh->vertices_out[vertexIndex + 0].position.z)					* vertices_weights[vertexIndex + swapOddVertices1])	+
+										 ((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv	/ m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z)	* vertices_weights[vertexIndex + swapOddVertices2]) +
+										 ((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv	/ m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z)	* vertices_weights[vertexIndex + 0])) * interpolatedZ;
 						finalColor = m_Texture->Sample(interpolatedUV);
 					}
 					else
 					{
-						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * vertices_ScreenSpace[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * vertices_ScreenSpace[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * vertices_ScreenSpace[vertexIndex + 2].color);
+						finalColor = ColorRGB(vertices_weights[vertexIndex + 0] * m_Mesh->vertices_out[vertexIndex + 0].color + vertices_weights[vertexIndex + 1] * m_Mesh->vertices_out[vertexIndex + 1].color + vertices_weights[vertexIndex + 2] * m_Mesh->vertices_out[vertexIndex + 2].color);
 					}
 
-					//m_pDepthBufferPixels[px + (py * m_Width)] = vertices_ScreenSpace[vertexIndex].position.z;
-					m_pDepthBufferPixels[px + (py * m_Width)] = interpolatedZ;
-
+					if (AreEqual(interpolatedZ, 0))
+					{
+						m_pDepthBufferPixels[pixelIndex] = m_Mesh->vertices_out[vertexIndex].position.z;
+					}
+					else
+					{
+						m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
+					}
 
 					//Update Color in Buffer
 					finalColor.MaxToOne();
 					//finalColor.ToneMap();
 
-					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
+					m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
 																		  static_cast<uint8_t>(finalColor.r * 255),
 																		  static_cast<uint8_t>(finalColor.g * 255),
 																		  static_cast<uint8_t>(finalColor.b * 255));
 				}
 			}
 		}
-
 	}
-
 }
