@@ -46,7 +46,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	const Vector3 translation{ 0.0f, 0.0f, 50.0f };
 	m_Mesh->Translate(translation);
-	m_Mesh->RotateY(static_cast<float>(M_PI)/2);
+	//m_Mesh->RotateY(static_cast<float>(M_PI)/2);
 }
 
 Renderer::~Renderer()
@@ -269,29 +269,12 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float interpola
 
 				m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
 
-				auto depthColorValue{ DepthRemap(interpolatedZ, 0.90f, 1.0f) };
 				//if there is a texture, display is, else display the vertex colors
-				if (m_DiffuseTexture and !m_ShowDepthBuffer)
-				{
-					interpolatedUV =   (((m_Mesh->vertices_out[vertexIndex + 0].uv				  / m_Mesh->vertices_out[vertexIndex + 0].position.w)				 * vertices_weights[vertexIndex + swapOddVertices1]) +
-										((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w) * vertices_weights[vertexIndex + swapOddVertices2]) +
-										((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) * vertices_weights[vertexIndex + 0])) * interpolatedW;
-					finalColor = m_DiffuseTexture->Sample(interpolatedUV) * ColorRGB(depthColorValue, depthColorValue, depthColorValue);
-				}
-				else
-				{
-					finalColor = ColorRGB(depthColorValue, depthColorValue, depthColorValue);
-				}
+				interpolatedUV =   (((m_Mesh->vertices_out[vertexIndex + 0].uv				  / m_Mesh->vertices_out[vertexIndex + 0].position.w)				 * vertices_weights[vertexIndex + swapOddVertices1]) +
+									((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w) * vertices_weights[vertexIndex + swapOddVertices2]) +
+									((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) * vertices_weights[vertexIndex + 0])) * interpolatedW;
 
 				Vertex_Out vertexToShade{};
-				//vertexToShade.position.x	= (	m_Mesh->vertices_out[vertexIndex + 0].position.x + 
-				//								m_Mesh->vertices_out[vertexIndex + 1].position.x + 
-				//								m_Mesh->vertices_out[vertexIndex + 2].position.x) / 3;
-
-				//vertexToShade.position.y	= (	m_Mesh->vertices_out[vertexIndex + 0].position.y + 
-				//								m_Mesh->vertices_out[vertexIndex + 1].position.y + 
-				//								m_Mesh->vertices_out[vertexIndex + 2].position.y) / 3;
-
 				vertexToShade.position.x	=	static_cast<float>(px);
 				vertexToShade.position.y	=	static_cast<float>(py);
 				vertexToShade.position.z	=	interpolatedZ;
@@ -301,7 +284,7 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float interpola
 				vertexToShade.normal		= (	(m_Mesh->vertices_out[vertexIndex + 0].normal				 * vertices_weights[vertexIndex + swapOddVertices1]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].normal * vertices_weights[vertexIndex + swapOddVertices2]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].normal * vertices_weights[vertexIndex + 0]) ) / 3;
-
+				vertexToShade.normal		=	vertexToShade.normal.Normalized();
 				vertexToShade.tangent		= ( (m_Mesh->vertices_out[vertexIndex + 0].tangent					* vertices_weights[vertexIndex + swapOddVertices1]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].tangent	* vertices_weights[vertexIndex + swapOddVertices2]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].tangent	* vertices_weights[vertexIndex + 0]) ) / 3;
@@ -394,7 +377,7 @@ float Renderer::DepthRemap(const float value, const float fromMin, const float f
 
 void Renderer::ToggleDepthBufferVisuals()
 {
-	m_ShowDepthBuffer = !m_ShowDepthBuffer;
+	m_ShowDiffuse = !m_ShowDiffuse;
 }
 
 void Renderer::ToggleUseNormalMap()
@@ -407,27 +390,44 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 {
 	ColorRGB result{};
 
+	float observedArea{}; 
 	float lightIntensity{ 7.0f };
+	Vector3 normal{ v.normal }; 
 	Vector3 lightDirection{ 0.577f, -0.577f, 0.577f };
-	ColorRGB ambient{ 0.25f, 0.25f, 0.25f };
+	ColorRGB ambient{ 0.05f, 0.05f, 0.05f };
+	ColorRGB diffuseColor{ colors::White };
 
-	Vector3 biNormaal{ Vector3::Cross(v.normal, v.tangent) };
-	Matrix tangentSpaceAxis{ Matrix(v.tangent, biNormaal, v.normal, Vector3::Zero) };
-
-	Vector3 sampledNormal{ Vector3(m_NormalsTexture->Sample(v.uv)) };
-	sampledNormal = tangentSpaceAxis.TransformVector(sampledNormal);
-
-	sampledNormal /= 255.0f;
-	sampledNormal = 2.0f * sampledNormal - Vector3(1.0f, 1.0f, 1.0f);
-
-	float cosTheta{ Vector3::Dot(sampledNormal, -lightDirection) };
-
-	ColorRGB Lambert{ lightIntensity * v.color };
-		
-	if (cosTheta >= 0.0f)
+	//calculate normal
+	if (m_UseNormalMap)
 	{
-		result = Lambert * cosTheta;
+		Vector3 biNormaal{ Vector3::Cross(v.normal, v.tangent) };
+		Matrix tangentSpaceAxis{ Matrix(v.tangent, biNormaal, v.normal, Vector3::Zero) };
+
+		normal = Vector3(m_NormalsTexture->Sample(v.uv));
+		normal = (2.0f * normal) - Vector3(1.0f, 1.0f, 1.0f);
+
+		normal = tangentSpaceAxis.TransformVector(normal);
+
+		normal.Normalize();
 	}
 
+	//calculate and set minimum observed area
+	observedArea = Vector3::Dot(normal, -lightDirection);
+	if (observedArea < 0.0f)
+	{
+		observedArea = 0.0f;
+	}
+	
+	//sample from diffuse texture
+	if (m_ShowDiffuse)
+	{
+		diffuseColor = m_DiffuseTexture->Sample(v.uv);
+	}
+	
+	float diffuseReflectance{ 1.0f };
+	ColorRGB Lambert{ diffuseReflectance * diffuseColor };
+		
+	result = Lambert * observedArea;
+	
 	return result;
 }

@@ -75,7 +75,7 @@ namespace dae
 
 		Mesh* m_Mesh = nullptr;
 
-		bool m_ShowDepthBuffer = false;
+		bool m_ShowDiffuse = true;
 		bool m_UseNormalMap = true;
 	};
 }
