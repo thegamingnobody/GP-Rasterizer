@@ -2,9 +2,10 @@
 
 #include <cstdint>
 #include <vector>
-#include <memory>
 
 #include "Camera.h"
+
+#include <memory>
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -54,8 +55,14 @@ namespace dae
 
 		void ToggleDepthBufferVisuals();
 		void ToggleUseNormalMap();
+		void ToggleRotation();
+		void ToggleShadingMode();
 
 		ColorRGB PixelShading(const Vertex_Out& v);
+
+		float CalculateOA(const Vector3& normal, const Vector3& lightDirection);
+		ColorRGB CalculateDiffuse(const float reflectance, const Vector2& uv);
+		ColorRGB CalculatePhong(const Vector3& normal, const Vector3& lightDirection, const Vector3& viewDirection, const Vector2& uv, const float shininess);
 	private:
 		SDL_Window* m_pWindow{};
 
@@ -72,10 +79,23 @@ namespace dae
 
 		Texture* m_DiffuseTexture;
 		Texture* m_NormalsTexture;
+		Texture* m_GlossinessTexture;
+		Texture* m_SpecularTexture;
 
 		Mesh* m_Mesh = nullptr;
+		float m_ModelYRotation{};
 
-		bool m_ShowDiffuse = true;
+		bool m_ShowDepthBuffer = true;
 		bool m_UseNormalMap = true;
+		bool m_IsRotating = false;
+
+		enum class ShadingMode
+		{
+			ObservedArea,
+			Diffuse,
+			Specular,
+			Combined
+		};
+		ShadingMode m_ShadingMode{ ShadingMode::Specular };
 	};
 }

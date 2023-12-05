@@ -25,9 +25,11 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 	//Initialize Camera
-	m_Camera.Initialize(45.0f, { 0.0f, 0.0f, 0.0f }, (static_cast<float>(m_Width) / m_Height));
+	m_Camera.Initialize(45.0f, { 0.0f, 5.0f, -64.0f }, (static_cast<float>(m_Width) / m_Height));
 
 	m_Mesh = new Mesh();
+
+	m_ModelYRotation = 0.0f;
 
 	//m_DiffuseTexture = m_DiffuseTexture->LoadFromFile("Resources/uv_grid_2.png");
 	//InitializeTriangles(m_Mesh->vertices, m_Mesh->indices);
@@ -36,17 +38,19 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	//Utils::ParseOBJ("Resources/tuktuk.obj", m_Mesh->vertices, m_Mesh->indices);
 	//m_Mesh->primitiveTopology = PrimitiveTopology::TriangleList;
 
-	m_DiffuseTexture = m_DiffuseTexture->LoadFromFile("Resources/vehicle_diffuse.png");
-	m_NormalsTexture = m_NormalsTexture->LoadFromFile("Resources/vehicle_normal.png");
+	m_DiffuseTexture	= m_DiffuseTexture->LoadFromFile("Resources/vehicle_diffuse.png");
+	m_NormalsTexture	= m_NormalsTexture->LoadFromFile("Resources/vehicle_normal.png");
+	m_SpecularTexture   = m_SpecularTexture->LoadFromFile("Resources/vehicle_specular.png");
+	m_GlossinessTexture = m_GlossinessTexture->LoadFromFile("Resources/vehicle_gloss.png");
+
 	Utils::ParseOBJ("Resources/vehicle.obj", m_Mesh->vertices, m_Mesh->indices);
 	m_Mesh->vertices_out.resize(m_Mesh->vertices.size());
 	m_Mesh->primitiveTopology = PrimitiveTopology::TriangleList;
 
 	m_Mesh->isVertex_outInScreenSpace.resize(m_Mesh->vertices.size());
 
-	const Vector3 translation{ 0.0f, 0.0f, 50.0f };
-	m_Mesh->Translate(translation);
-	//m_Mesh->RotateY(static_cast<float>(M_PI)/2);
+	//const Vector3 translation{ 0.0f, 0.0f, 50.0f };
+	//m_Mesh->Translate(translation);
 }
 
 Renderer::~Renderer()
@@ -60,6 +64,12 @@ void Renderer::Update(Timer* pTimer)
 
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
 	std::fill_n(m_pBackBufferPixels, m_Width * m_Height, 0);
+
+	if (m_IsRotating)
+	{
+		m_ModelYRotation += 1.0f * pTimer->GetElapsed();
+		m_Mesh->RotateY(m_ModelYRotation);
+	}
 
 	m_Mesh->Update();
 }
@@ -93,11 +103,12 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 	{
 		currentVertex = vertices_in[index];
 
-		out.color = currentVertex.color;
-		out.uv = currentVertex.uv;
-		out.position = finalMatrix.TransformPoint(currentVertex.position.ToPoint4());
-		out.normal   = m_Mesh->worldMatrix.TransformVector(currentVertex.normal.ToVector4());
-		out.tangent  = m_Mesh->worldMatrix.TransformVector(currentVertex.tangent.ToVector4());
+		out.color			= currentVertex.color;
+		out.uv				= currentVertex.uv;
+		out.position		= finalMatrix.TransformPoint(currentVertex.position.ToPoint4());
+		out.normal			= m_Mesh->worldMatrix.TransformVector(currentVertex.normal.ToVector4());
+		out.tangent			= m_Mesh->worldMatrix.TransformVector(currentVertex.tangent.ToVector4());
+		out.viewDirection	= out.position - m_Camera.origin.ToPoint4();
 
 		out.position.x /= out.position.w;
 		out.position.y /= out.position.w;
@@ -269,10 +280,19 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float interpola
 
 				m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
 
-				//if there is a texture, display is, else display the vertex colors
 				interpolatedUV =   (((m_Mesh->vertices_out[vertexIndex + 0].uv				  / m_Mesh->vertices_out[vertexIndex + 0].position.w)				 * vertices_weights[vertexIndex + swapOddVertices1]) +
 									((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w) * vertices_weights[vertexIndex + swapOddVertices2]) +
 									((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) * vertices_weights[vertexIndex + 0])) * interpolatedW;
+
+				if (m_ShowDepthBuffer)
+				{
+					float remap{ DepthRemap(interpolatedZ, 0.95f, 1.0f) };
+					finalColor = ColorRGB(remap, remap, remap);
+				}
+				else
+				{
+					finalColor = colors::White;
+				}
 
 				Vertex_Out vertexToShade{};
 				vertexToShade.position.x	=	static_cast<float>(px);
@@ -285,13 +305,15 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float interpola
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].normal * vertices_weights[vertexIndex + swapOddVertices2]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].normal * vertices_weights[vertexIndex + 0]) ) / 3;
 				vertexToShade.normal		=	vertexToShade.normal.Normalized();
+
 				vertexToShade.tangent		= ( (m_Mesh->vertices_out[vertexIndex + 0].tangent					* vertices_weights[vertexIndex + swapOddVertices1]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].tangent	* vertices_weights[vertexIndex + swapOddVertices2]) +
 												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].tangent	* vertices_weights[vertexIndex + 0]) ) / 3;
 
-				//vertexToShade.viewDirection = (	m_Mesh->vertices_out[vertexIndex + 0].viewDirection + 
-				//								m_Mesh->vertices_out[vertexIndex + 1].viewDirection + 
-				//								m_Mesh->vertices_out[vertexIndex + 2].viewDirection) / 3;
+				vertexToShade.viewDirection = (	(m_Mesh->vertices_out[vertexIndex + 0].viewDirection				* vertices_weights[vertexIndex + swapOddVertices1]) +
+												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].viewDirection * vertices_weights[vertexIndex + swapOddVertices2]) +
+												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].viewDirection * vertices_weights[vertexIndex + 0])) / 3;
+				vertexToShade.viewDirection.Normalize();
 
 				finalColor = PixelShading(vertexToShade);
 
@@ -377,7 +399,8 @@ float Renderer::DepthRemap(const float value, const float fromMin, const float f
 
 void Renderer::ToggleDepthBufferVisuals()
 {
-	m_ShowDiffuse = !m_ShowDiffuse;
+	m_ShowDepthBuffer = !m_ShowDepthBuffer;
+	std::cout << "Show depth buffer: " << std::boolalpha << m_ShowDepthBuffer << "\n";
 }
 
 void Renderer::ToggleUseNormalMap()
@@ -386,15 +409,52 @@ void Renderer::ToggleUseNormalMap()
 	std::cout << "Using Normal Map: " << std::boolalpha << m_UseNormalMap << "\n";
 }
 
+void Renderer::ToggleRotation()
+{
+	m_IsRotating = !m_IsRotating;
+	std::cout << "Is Rotating: " << std::boolalpha << m_IsRotating << "\n";
+}
+
+void Renderer::ToggleShadingMode()
+{
+	switch (m_ShadingMode)
+	{
+	case Renderer::ShadingMode::ObservedArea:
+		std::cout << "Shading mode: Diffuse\n";
+		m_ShadingMode = ShadingMode::Diffuse; 
+		break;
+	case Renderer::ShadingMode::Diffuse:
+		std::cout << "Shading mode: Specular\n";
+		m_ShadingMode = ShadingMode::Specular; 
+		break;
+	case Renderer::ShadingMode::Specular:
+		std::cout << "Shading mode: Combined\n";
+		m_ShadingMode = ShadingMode::Combined; 
+		break;
+	case Renderer::ShadingMode::Combined:
+		std::cout << "Shading mode: Observed Area\n";
+		m_ShadingMode = ShadingMode::ObservedArea;
+		break;
+	}
+}
+
 ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 {
-	ColorRGB result{};
+	ColorRGB result{ v.color };
 
+	float angle{};
+	float shininess{ 25.0f };
 	float observedArea{}; 
-	float lightIntensity{ 7.0f };
+	float phongExponent{};
+	float KD{ 7.0f };
+	float diffuseReflectance{ 1.0f };
+	float specularReflectCoeficient{};
 	Vector3 normal{ v.normal }; 
+	Vector3 reflect{};
 	Vector3 lightDirection{ 0.577f, -0.577f, 0.577f };
-	ColorRGB ambient{ 0.05f, 0.05f, 0.05f };
+	ColorRGB phong{};
+	ColorRGB lambert{};
+	ColorRGB ambient{ 0.30f, 0.30f, 0.30f };
 	ColorRGB diffuseColor{ colors::White };
 
 	//calculate normal
@@ -411,23 +471,67 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 		normal.Normalize();
 	}
 
-	//calculate and set minimum observed area
-	observedArea = Vector3::Dot(normal, -lightDirection);
-	if (observedArea < 0.0f)
+	switch (m_ShadingMode)
 	{
-		observedArea = 0.0f;
+	case Renderer::ShadingMode::ObservedArea:
+		observedArea = CalculateOA(normal, lightDirection);
+		result *= ColorRGB(observedArea, observedArea, observedArea);
+		break;
+
+	case Renderer::ShadingMode::Diffuse:
+		lambert = CalculateDiffuse(diffuseReflectance, v.uv);
+		result *= lambert;
+		break;
+
+	case Renderer::ShadingMode::Specular:
+		phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
+		result *= phong;
+		break;
+
+	case Renderer::ShadingMode::Combined:
+		observedArea = CalculateOA(normal, lightDirection);
+		lambert = CalculateDiffuse(diffuseReflectance, v.uv);
+		phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
+
+		result *= (lambert + phong) * observedArea;
+		break;
 	}
-	
-	//sample from diffuse texture
-	if (m_ShowDiffuse)
-	{
-		diffuseColor = m_DiffuseTexture->Sample(v.uv);
-	}
-	
-	float diffuseReflectance{ 1.0f };
-	ColorRGB Lambert{ diffuseReflectance * diffuseColor };
-		
-	result = Lambert * observedArea;
-	
+
 	return result;
+}
+
+float Renderer::CalculateOA(const Vector3& normal, const Vector3& lightDirection)
+{
+	float result = Vector3::Dot(normal, -lightDirection);
+	if (result < 0.0f)
+	{
+		result = 0.0f;
+	}
+
+	return result;
+}
+ColorRGB Renderer::CalculateDiffuse(const float reflectance, const Vector2& uv)
+{
+	ColorRGB diffuseColor = m_DiffuseTexture->Sample(uv);
+	diffuseColor *= reflectance;
+
+	return diffuseColor;
+}
+ColorRGB Renderer::CalculatePhong(const Vector3& normal, const Vector3& lightDirection, const Vector3& viewDirection, const Vector2& uv, const float shininess)
+{
+	Vector3 reflect{ Vector3::Reflect(lightDirection, normal).Normalized() };
+	float angle{ Vector3::Dot(reflect, viewDirection) };
+
+	if (angle < 0.0f)
+	{
+		angle = 0.0f;
+	}
+
+	float phongExponent{ m_GlossinessTexture->Sample(uv).r * shininess };
+
+	float specularReflectCoeficient{ m_SpecularTexture->Sample(uv).r };
+
+	float phong{ (specularReflectCoeficient * powf(angle, phongExponent)) };
+
+	return ColorRGB(phong, phong, phong);
 }
