@@ -36,7 +36,7 @@ int main(int argc, char* args[])
 	const uint32_t height = 480;
 
 	SDL_Window* pWindow = SDL_CreateWindow(
-		"Rasterizer - W6 DEMO",
+		"Rasterizer - **Seppe Mestdagh (2DAE18)**",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		width, height, 0);
@@ -73,6 +73,8 @@ int main(int argc, char* args[])
 					takeScreenshot = true;
 				if (e.key.keysym.scancode == SDL_SCANCODE_F4)
 					pRenderer->ToggleDepthBufferVisuals();
+				if (e.key.keysym.scancode == SDL_SCANCODE_N)
+					pRenderer->ToggleUseNormalMap();
 				break;
 			}
 		}

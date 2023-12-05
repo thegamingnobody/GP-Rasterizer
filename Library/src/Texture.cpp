@@ -45,14 +45,14 @@ namespace dae
 		//Sample the correct texel for the given uv
 		uint8_t r{}, g{}, b{};
 
-		float u = std::clamp(uv.x, 0.0f, 1.0f);
-		float v = std::clamp(uv.y, 0.0f, 1.0f);
-		size_t px = static_cast<size_t>(u * m_pSurface->w);
-		size_t py = static_cast<size_t>(v * m_pSurface->h);
+		const float u = std::clamp(uv.x, 0.0f, 1.0f);
+		const float v = std::clamp(uv.y, 0.0f, 1.0f);
+		const size_t px = static_cast<size_t>(u * m_pSurface->w);
+		const size_t py = static_cast<size_t>(v * m_pSurface->h);
 
 		SDL_GetRGB(m_pSurfacePixels[(py * m_pSurface->w) + px], m_pSurface->format, &r, &g, &b);
 
-		ColorRGB result{ r / 255.0f , g / 255.0f , b / 255.0f };
+		const ColorRGB result{ r / 255.0f , g / 255.0f , b / 255.0f };
 		return result;
 	}
 }

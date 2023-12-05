@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 #include "Camera.h"
 
@@ -40,8 +41,8 @@ namespace dae
 
 		void InitializeTriangles(std::vector<Vertex>& verticesNDC, std::vector<uint32_t>& trianglesVertexIndices);
 
-		void RenderStrip(int vertexIndex, float interpolatedZ, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights, bool isStrip);
-		void RenderList(int vertexIndex, float interpolatedZ, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights);
+		void RenderStrip(int vertexIndex, float interpolatedZ, float interpolatedW, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights, bool isStrip);
+		void RenderList(int vertexIndex, float interpolatedZ, float interpolatedW, float totalWeight, Vector2& pixel, Vector2& interpolatedUV, ColorRGB& finalColor, int swapOddVertices1, int swapOddVertices2, int pixelIndex, std::vector<float>& vertices_weights);
 		
 		bool CheckCulling(const int vertexIndex);
 
@@ -52,6 +53,9 @@ namespace dae
 		float DepthRemap(const float value, const float fromMin, const float fromMax);
 
 		void ToggleDepthBufferVisuals();
+		void ToggleUseNormalMap();
+
+		ColorRGB PixelShading(const Vertex_Out& v);
 	private:
 		SDL_Window* m_pWindow{};
 
@@ -66,10 +70,12 @@ namespace dae
 		int m_Width{};
 		int m_Height{};
 
-		Texture* m_Texture;
+		Texture* m_DiffuseTexture;
+		Texture* m_NormalsTexture;
 
 		Mesh* m_Mesh = nullptr;
 
 		bool m_ShowDepthBuffer = false;
+		bool m_UseNormalMap = true;
 	};
 }

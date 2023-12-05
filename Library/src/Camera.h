@@ -24,23 +24,23 @@ namespace dae
 		float fov{ tanf((fovAngle * TO_RADIANS) / 2.f) };
 		float fovCheck{ fov };
 		float ratio{};
-		float nearPlane{ 1.0f };
-		float farPlane{ 1000.0f };
+		float nearPlane{ 0.1f };
+		float farPlane{ 100.0f };
 
 		Vector3 forward{Vector3::UnitZ};
 		Vector3 up{Vector3::UnitY};
 		Vector3 right{Vector3::UnitX};
 
 		float totalPitch{};
-		float totalYaw{};
+		float totalYaw{0};
 
 		Matrix invViewMatrix{};
 		Matrix viewMatrix{};
 		Matrix projectionMatrix{};
 		Matrix worldViewProjectionMatrix{};
 
-		float m_CameraMovementSpeed{ 10.0f };
-		float m_CameraRotationSpeed{ 4.0f };
+		float m_CameraMovementSpeed{ 20.0f };
+		float m_CameraRotationSpeed{ 1.5f };
 
 		void Initialize(float _fovAngle = 90.f, Vector3 _origin = {0.f,0.f,0.f}, float aspectRatio = 1.0f)
 		{
@@ -95,7 +95,7 @@ namespace dae
 
 			//Camera Update Logic
 			//...
-			const float movementSpeed{ 7.5f * deltaTime };
+			const float movementSpeed{ m_CameraMovementSpeed * deltaTime };
 
 			//Keyboard Input
 			const uint8_t* pKeyboardState = SDL_GetKeyboardState(nullptr);
@@ -134,7 +134,7 @@ namespace dae
 			int mouseX{}, mouseY{};
 			const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
-			const float rotationSpeed{ 1.5f / 180.0f };
+			const float rotationSpeed{ m_CameraRotationSpeed / 180.0f };
 
 			if (mouseState == SDL_BUTTON_LMASK)
 			{
