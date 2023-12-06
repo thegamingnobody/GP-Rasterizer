@@ -31,13 +31,6 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	m_ModelYRotation = 0.0f;
 
-	//m_DiffuseTexture = m_DiffuseTexture->LoadFromFile("Resources/uv_grid_2.png");
-	//InitializeTriangles(m_Mesh->vertices, m_Mesh->indices);
-
-	//m_DiffuseTexture = m_DiffuseTexture->LoadFromFile("Resources/tuktuk.png");
-	//Utils::ParseOBJ("Resources/tuktuk.obj", m_Mesh->vertices, m_Mesh->indices);
-	//m_Mesh->primitiveTopology = PrimitiveTopology::TriangleList;
-
 	m_DiffuseTexture	= m_DiffuseTexture->LoadFromFile("Resources/vehicle_diffuse.png");
 	m_NormalsTexture	= m_NormalsTexture->LoadFromFile("Resources/vehicle_normal.png");
 	m_SpecularTexture   = m_SpecularTexture->LoadFromFile("Resources/vehicle_specular.png");
@@ -48,14 +41,16 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_Mesh->primitiveTopology = PrimitiveTopology::TriangleList;
 
 	m_Mesh->isVertex_outInScreenSpace.resize(m_Mesh->vertices.size());
-
-	//const Vector3 translation{ 0.0f, 0.0f, 50.0f };
-	//m_Mesh->Translate(translation);
 }
 
 Renderer::~Renderer()
 {
 	delete[] m_pDepthBufferPixels;
+	delete m_SpecularTexture;
+	delete m_GlossinessTexture;
+	delete m_NormalsTexture;
+	delete m_DiffuseTexture;
+	delete m_Mesh;
 }
 
 void Renderer::Update(Timer* pTimer)
@@ -284,15 +279,8 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float interpola
 									((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w) * vertices_weights[vertexIndex + swapOddVertices2]) +
 									((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) * vertices_weights[vertexIndex + 0])) * interpolatedW;
 
-				if (m_ShowDepthBuffer)
-				{
-					float remap{ DepthRemap(interpolatedZ, 0.95f, 1.0f) };
-					finalColor = ColorRGB(remap, remap, remap);
-				}
-				else
-				{
-					finalColor = colors::White;
-				}
+				float remap{ DepthRemap(interpolatedZ, 0.9975f, 1.0f) };
+				finalColor = ColorRGB(remap, remap, remap);
 
 				Vertex_Out vertexToShade{};
 				vertexToShade.position.x	=	static_cast<float>(px);
@@ -334,6 +322,7 @@ bool Renderer::CheckCulling(const int vertexIndex)
 {
 	const int frustumOffset{ 1 };
 
+	//check for frustum
 	for (int i = 0; i < 3; i++)
 	{
 		if (m_Mesh->isVertex_outInScreenSpace[vertexIndex + i] == false)
@@ -352,6 +341,7 @@ bool Renderer::CheckCulling(const int vertexIndex)
 		return true;
 	}
 
+	//check if 2 vertices in triangle are the same => not a triangle => skip
 	if (m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 1] or 
 		m_Mesh->indices[vertexIndex + 0] == m_Mesh->indices[vertexIndex + 2] or 
 		m_Mesh->indices[vertexIndex + 1] == m_Mesh->indices[vertexIndex + 2])
@@ -393,6 +383,10 @@ void Renderer::ConvertToScreenSpace(const int vertexIndex)
 float Renderer::DepthRemap(const float value, const float fromMin, const float fromMax)
 {
 	float normalizedValue{ (value - fromMin) / (fromMax - fromMin) };
+	if (normalizedValue < 0.0f)
+	{
+		normalizedValue = 0.0f;
+	}
 
 	return normalizedValue;
 }
@@ -402,19 +396,16 @@ void Renderer::ToggleDepthBufferVisuals()
 	m_ShowDepthBuffer = !m_ShowDepthBuffer;
 	std::cout << "Show depth buffer: " << std::boolalpha << m_ShowDepthBuffer << "\n";
 }
-
 void Renderer::ToggleUseNormalMap()
 {
 	m_UseNormalMap = !m_UseNormalMap;
 	std::cout << "Using Normal Map: " << std::boolalpha << m_UseNormalMap << "\n";
 }
-
 void Renderer::ToggleRotation()
 {
 	m_IsRotating = !m_IsRotating;
 	std::cout << "Is Rotating: " << std::boolalpha << m_IsRotating << "\n";
 }
-
 void Renderer::ToggleShadingMode()
 {
 	switch (m_ShadingMode)
@@ -442,20 +433,15 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 {
 	ColorRGB result{ v.color };
 
-	float angle{};
 	float shininess{ 25.0f };
 	float observedArea{}; 
-	float phongExponent{};
 	float KD{ 7.0f };
 	float diffuseReflectance{ 1.0f };
-	float specularReflectCoeficient{};
 	Vector3 normal{ v.normal }; 
-	Vector3 reflect{};
 	Vector3 lightDirection{ 0.577f, -0.577f, 0.577f };
 	ColorRGB phong{};
 	ColorRGB lambert{};
-	ColorRGB ambient{ 0.30f, 0.30f, 0.30f };
-	ColorRGB diffuseColor{ colors::White };
+	//ColorRGB ambient{ 0.30f, 0.30f, 0.30f };
 
 	//calculate normal
 	if (m_UseNormalMap)
@@ -471,30 +457,32 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 		normal.Normalize();
 	}
 
-	switch (m_ShadingMode)
+	if (m_ShowDepthBuffer == false)
 	{
-	case Renderer::ShadingMode::ObservedArea:
 		observedArea = CalculateOA(normal, lightDirection);
-		result *= ColorRGB(observedArea, observedArea, observedArea);
-		break;
+		switch (m_ShadingMode)
+		{
+		case Renderer::ShadingMode::ObservedArea:
+			result = ColorRGB(observedArea, observedArea, observedArea);
+			break;
 
-	case Renderer::ShadingMode::Diffuse:
-		lambert = CalculateDiffuse(diffuseReflectance, v.uv);
-		result *= lambert;
-		break;
+		case Renderer::ShadingMode::Diffuse:
+			lambert = CalculateDiffuse(diffuseReflectance, v.uv);
+			result = lambert * observedArea;
+			break;
 
-	case Renderer::ShadingMode::Specular:
-		phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
-		result *= phong;
-		break;
+		case Renderer::ShadingMode::Specular:
+			phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
+			result = phong * observedArea;
+			break;
 
-	case Renderer::ShadingMode::Combined:
-		observedArea = CalculateOA(normal, lightDirection);
-		lambert = CalculateDiffuse(diffuseReflectance, v.uv);
-		phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
+		case Renderer::ShadingMode::Combined:
+			lambert = CalculateDiffuse(diffuseReflectance, v.uv);
+			phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
+			result = (lambert + phong) * observedArea;
+			break;
+		}
 
-		result *= (lambert + phong) * observedArea;
-		break;
 	}
 
 	return result;
@@ -520,18 +508,16 @@ ColorRGB Renderer::CalculateDiffuse(const float reflectance, const Vector2& uv)
 ColorRGB Renderer::CalculatePhong(const Vector3& normal, const Vector3& lightDirection, const Vector3& viewDirection, const Vector2& uv, const float shininess)
 {
 	Vector3 reflect{ Vector3::Reflect(lightDirection, normal).Normalized() };
-	float angle{ Vector3::Dot(reflect, viewDirection) };
-
-	if (angle < 0.0f)
+	float angle{ Vector3::Dot(-reflect, viewDirection) };
+	if (angle >= 0.0f)
 	{
-		angle = 0.0f;
+		float phongExponent{ m_GlossinessTexture->Sample(uv).r * shininess }; 
+
+		float specularReflectCoeficient{ m_SpecularTexture->Sample(uv).r }; 
+
+		float phong{ specularReflectCoeficient * powf(angle, phongExponent) };		
+		return ColorRGB(phong, phong, phong);
 	}
 
-	float phongExponent{ m_GlossinessTexture->Sample(uv).r * shininess };
-
-	float specularReflectCoeficient{ m_SpecularTexture->Sample(uv).r };
-
-	float phong{ (specularReflectCoeficient * powf(angle, phongExponent)) };
-
-	return ColorRGB(phong, phong, phong);
+	return colors::Black;
 }

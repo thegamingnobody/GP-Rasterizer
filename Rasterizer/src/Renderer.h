@@ -85,7 +85,7 @@ namespace dae
 		Mesh* m_Mesh = nullptr;
 		float m_ModelYRotation{};
 
-		bool m_ShowDepthBuffer = true;
+		bool m_ShowDepthBuffer = false;
 		bool m_UseNormalMap = true;
 		bool m_IsRotating = false;
 
@@ -96,6 +96,6 @@ namespace dae
 			Specular,
 			Combined
 		};
-		ShadingMode m_ShadingMode{ ShadingMode::Specular };
+		ShadingMode m_ShadingMode{ ShadingMode::Combined };
 	};
 }

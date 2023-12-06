@@ -117,6 +117,9 @@ int main(int argc, char* args[])
 
 	ShutDown(pWindow);
 
+	//I found these 2 lines of code online and output memory leaks if I close the program correctly in debug mode. 
+	//This is because VLD didn't work on my laptop/this project. It doesn't tell me where the leaks are, only that there are leaks.
+	//Not the best, but it's bettet than nothing I suppose...
 	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
 	_CrtDumpMemoryLeaks();
 	return 0;
