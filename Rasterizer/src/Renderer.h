@@ -57,6 +57,7 @@ namespace dae
 		void ToggleUseNormalMap();
 		void ToggleRotation();
 		void ToggleShadingMode();
+		void ToggleShowBoudingBox();
 
 		ColorRGB PixelShading(const Vertex_Out& v);
 
@@ -86,8 +87,9 @@ namespace dae
 		float m_ModelYRotation{};
 
 		bool m_ShowDepthBuffer = false;
-		bool m_UseNormalMap = true;
-		bool m_IsRotating = false;
+		bool m_UseNormalMap = false;
+		bool m_IsRotating = true;
+		bool m_ShowBoundingBox = false;
 
 		enum class ShadingMode
 		{

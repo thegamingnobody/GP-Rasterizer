@@ -71,6 +71,8 @@ int main(int argc, char* args[])
 			case SDL_KEYUP:
 				if (e.key.keysym.scancode == SDL_SCANCODE_X)
 					takeScreenshot = true;
+				if (e.key.keysym.scancode == SDL_SCANCODE_F3)
+					pRenderer->ToggleShowBoudingBox();
 				if (e.key.keysym.scancode == SDL_SCANCODE_F4)
 					pRenderer->ToggleDepthBufferVisuals();
 				if (e.key.keysym.scancode == SDL_SCANCODE_F5)
@@ -79,7 +81,6 @@ int main(int argc, char* args[])
 					pRenderer->ToggleUseNormalMap();
 				if (e.key.keysym.scancode == SDL_SCANCODE_F7)
 					pRenderer->ToggleShadingMode();
-
 				break;
 			}
 		}

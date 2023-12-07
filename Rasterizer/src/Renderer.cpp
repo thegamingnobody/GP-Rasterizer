@@ -62,7 +62,9 @@ void Renderer::Update(Timer* pTimer)
 
 	if (m_IsRotating)
 	{
-		m_ModelYRotation += 1.0f * pTimer->GetElapsed();
+
+		float rotateSpeed{ 1.0f };
+		m_ModelYRotation += rotateSpeed * pTimer->GetElapsed();
 		m_Mesh->RotateY(m_ModelYRotation);
 	}
 
@@ -234,80 +236,94 @@ void Renderer::RenderStrip(int vertexIndex, float interpolatedZ, float interpola
 	{
 		for (int py{ minY }; py < maxY; ++py)
 		{
-			finalColor = ColorRGB(0.0f, 0.0f, 0.0f);
-			pixel = Vector2(px + 0.5f, py + 0.5f);
-			pixelIndex = px + (py * m_Width);
-
-			if (m_pDepthBufferPixels[pixelIndex] > m_Mesh->vertices_out[vertexIndex].position.z)
+			if (m_ShowBoundingBox == false)
 			{
-				//initial weight calculation
-				vertices_weights[vertexIndex + 0]					= Vector2::Cross(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY()	- m_Mesh->vertices_out[vertexIndex + 0].position.GetXY(),					pixel - m_Mesh->vertices_out[vertexIndex + 0].position.GetXY());
-				vertices_weights[vertexIndex + swapOddVertices1]	= Vector2::Cross(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY()	- m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY(),	pixel - m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY());
-				vertices_weights[vertexIndex + swapOddVertices2]	= Vector2::Cross(m_Mesh->vertices_out[vertexIndex + 0].position.GetXY()					- m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY(),	pixel - m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY());
+				finalColor = ColorRGB(0.0f, 0.0f, 0.0f);
+				pixel = Vector2(px + 0.5f, py + 0.5f);
+				pixelIndex = px + (py * m_Width);
 
-				if (vertices_weights[vertexIndex + 0] < 0 or vertices_weights[vertexIndex + 1] < 0 or vertices_weights[vertexIndex + 2] < 0) continue;
-
-				//normalize weights and calculate total weight
-				totalWeight =	vertices_weights[vertexIndex + 0] + 
-								vertices_weights[vertexIndex + 1] + 
-								vertices_weights[vertexIndex + 2];
-
-				vertices_weights[vertexIndex + 0]				 /= totalWeight;
-				vertices_weights[vertexIndex + swapOddVertices1] /= totalWeight;
-				vertices_weights[vertexIndex + swapOddVertices2] /= totalWeight;
-
-				totalWeight =	vertices_weights[vertexIndex + 0] + 
-								vertices_weights[vertexIndex + 1] + 
-								vertices_weights[vertexIndex + 2];
-
-				interpolatedZ = 1 / ((vertices_weights[vertexIndex + 0]				   / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) + 
-									 (vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.z) + 
-									 (vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z));
-
-				interpolatedW = 1 / ((vertices_weights[vertexIndex + 0]				   / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) + 
-									 (vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.w) + 
-									 (vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w));					
-				
-				if (m_pDepthBufferPixels[pixelIndex] < interpolatedZ)
+				if (m_pDepthBufferPixels[pixelIndex] > m_Mesh->vertices_out[vertexIndex].position.z)
 				{
-					continue;
+					//initial weight calculation
+					vertices_weights[vertexIndex + 0] = Vector2::Cross(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY() - m_Mesh->vertices_out[vertexIndex + 0].position.GetXY(), pixel - m_Mesh->vertices_out[vertexIndex + 0].position.GetXY());
+					vertices_weights[vertexIndex + swapOddVertices1] = Vector2::Cross(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY() - m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY(), pixel - m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.GetXY());
+					vertices_weights[vertexIndex + swapOddVertices2] = Vector2::Cross(m_Mesh->vertices_out[vertexIndex + 0].position.GetXY() - m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY(), pixel - m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.GetXY());
+
+					if (vertices_weights[vertexIndex + 0] < 0 or vertices_weights[vertexIndex + 1] < 0 or vertices_weights[vertexIndex + 2] < 0) continue;
+
+					//normalize weights and calculate total weight
+					totalWeight = vertices_weights[vertexIndex + 0] +
+						vertices_weights[vertexIndex + 1] +
+						vertices_weights[vertexIndex + 2];
+
+					vertices_weights[vertexIndex + 0] /= totalWeight;
+					vertices_weights[vertexIndex + swapOddVertices1] /= totalWeight;
+					vertices_weights[vertexIndex + swapOddVertices2] /= totalWeight;
+
+					totalWeight = vertices_weights[vertexIndex + 0] +
+						vertices_weights[vertexIndex + 1] +
+						vertices_weights[vertexIndex + 2];
+
+					interpolatedZ = 1 / ((vertices_weights[vertexIndex + 0] / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.z) +
+						(vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.z) +
+						(vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.z));
+
+					interpolatedW = 1 / ((vertices_weights[vertexIndex + 0] / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) +
+						(vertices_weights[vertexIndex + swapOddVertices1] / m_Mesh->vertices_out[vertexIndex + 0].position.w) +
+						(vertices_weights[vertexIndex + swapOddVertices2] / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w));
+
+					if (m_pDepthBufferPixels[pixelIndex] < interpolatedZ)
+					{
+						continue;
+					}
+
+					m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
+
+					interpolatedUV = (((m_Mesh->vertices_out[vertexIndex + 0].uv / m_Mesh->vertices_out[vertexIndex + 0].position.w) * vertices_weights[vertexIndex + swapOddVertices1]) +
+						((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w) * vertices_weights[vertexIndex + swapOddVertices2]) +
+						((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) * vertices_weights[vertexIndex + 0])) * interpolatedW;
+
+					float remap{ DepthRemap(interpolatedZ, 0.9975f, 1.0f) };
+					finalColor = ColorRGB(remap, remap, remap);
+
+					Vertex_Out vertexToShade{};
+					vertexToShade.position.x = static_cast<float>(px);
+					vertexToShade.position.y = static_cast<float>(py);
+					vertexToShade.position.z = interpolatedZ;
+					vertexToShade.position.w = interpolatedW;
+					vertexToShade.color = finalColor;
+					vertexToShade.uv = interpolatedUV;
+					vertexToShade.normal = ((m_Mesh->vertices_out[vertexIndex + 0].normal * vertices_weights[vertexIndex + swapOddVertices1]) +
+						(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].normal * vertices_weights[vertexIndex + swapOddVertices2]) +
+						(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].normal * vertices_weights[vertexIndex + 0])) / 3;
+
+
+					vertexToShade.tangent = ((m_Mesh->vertices_out[vertexIndex + 0].tangent * vertices_weights[vertexIndex + swapOddVertices1]) +
+						(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].tangent * vertices_weights[vertexIndex + swapOddVertices2]) +
+						(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].tangent * vertices_weights[vertexIndex + 0])) / 3;
+
+					vertexToShade.viewDirection = ((m_Mesh->vertices_out[vertexIndex + 0].viewDirection * vertices_weights[vertexIndex + swapOddVertices1]) +
+						(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].viewDirection * vertices_weights[vertexIndex + swapOddVertices2]) +
+						(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].viewDirection * vertices_weights[vertexIndex + 0])) / 3;
+					vertexToShade.viewDirection.Normalize();
+
+					finalColor = PixelShading(vertexToShade);
+
+					//Update Color in Buffer
+					finalColor.MaxToOne();
+					//finalColor.ToneMap();
+
+					m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
+						static_cast<uint8_t>(finalColor.r * 255),
+						static_cast<uint8_t>(finalColor.g * 255),
+						static_cast<uint8_t>(finalColor.b * 255));
 				}
+			}
+			else
+			{
+				pixelIndex = px + (py * m_Width);
 
-				m_pDepthBufferPixels[pixelIndex] = interpolatedZ;
-
-				interpolatedUV =   (((m_Mesh->vertices_out[vertexIndex + 0].uv				  / m_Mesh->vertices_out[vertexIndex + 0].position.w)				 * vertices_weights[vertexIndex + swapOddVertices1]) +
-									((m_Mesh->vertices_out[vertexIndex + swapOddVertices1].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices1].position.w) * vertices_weights[vertexIndex + swapOddVertices2]) +
-									((m_Mesh->vertices_out[vertexIndex + swapOddVertices2].uv / m_Mesh->vertices_out[vertexIndex + swapOddVertices2].position.w) * vertices_weights[vertexIndex + 0])) * interpolatedW;
-
-				float remap{ DepthRemap(interpolatedZ, 0.9975f, 1.0f) };
-				finalColor = ColorRGB(remap, remap, remap);
-
-				Vertex_Out vertexToShade{};
-				vertexToShade.position.x	=	static_cast<float>(px);
-				vertexToShade.position.y	=	static_cast<float>(py);
-				vertexToShade.position.z	=	interpolatedZ;
-				vertexToShade.position.w	=	interpolatedW;
-				vertexToShade.color			=	finalColor;
-				vertexToShade.uv			=	interpolatedUV;
-				vertexToShade.normal		= (	(m_Mesh->vertices_out[vertexIndex + 0].normal				 * vertices_weights[vertexIndex + swapOddVertices1]) +
-												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].normal * vertices_weights[vertexIndex + swapOddVertices2]) +
-												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].normal * vertices_weights[vertexIndex + 0]) ) / 3;
-				vertexToShade.normal		=	vertexToShade.normal.Normalized();
-
-				vertexToShade.tangent		= ( (m_Mesh->vertices_out[vertexIndex + 0].tangent					* vertices_weights[vertexIndex + swapOddVertices1]) +
-												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].tangent	* vertices_weights[vertexIndex + swapOddVertices2]) +
-												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].tangent	* vertices_weights[vertexIndex + 0]) ) / 3;
-
-				vertexToShade.viewDirection = (	(m_Mesh->vertices_out[vertexIndex + 0].viewDirection				* vertices_weights[vertexIndex + swapOddVertices1]) +
-												(m_Mesh->vertices_out[vertexIndex + swapOddVertices1].viewDirection * vertices_weights[vertexIndex + swapOddVertices2]) +
-												(m_Mesh->vertices_out[vertexIndex + swapOddVertices2].viewDirection * vertices_weights[vertexIndex + 0])) / 3;
-				vertexToShade.viewDirection.Normalize();
-
-				finalColor = PixelShading(vertexToShade);
-
-				//Update Color in Buffer
-				finalColor.MaxToOne();
-				//finalColor.ToneMap();
+				finalColor = colors::White;
 
 				m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
 					static_cast<uint8_t>(finalColor.r * 255),
@@ -359,7 +375,7 @@ void Renderer::CalculateBoundingBox(int& minX, int& maxX, int& minY, int& maxY, 
 	maxX = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.x, m_Mesh->vertices_out[vertexIndex + 1].position.x, m_Mesh->vertices_out[vertexIndex + 2].position.x }));
 	maxY = int(std::max({ m_Mesh->vertices_out[vertexIndex + 0].position.y, m_Mesh->vertices_out[vertexIndex + 1].position.y, m_Mesh->vertices_out[vertexIndex + 2].position.y }));
 
-	int offset{ 5 };
+	int offset{ 1 };
 	minX = std::clamp(minX, offset, m_Width - offset)  - offset;
 	maxX = std::clamp(maxX, offset, m_Width - offset)  + offset;
 	minY = std::clamp(minY, offset, m_Height - offset) - offset;
@@ -428,6 +444,12 @@ void Renderer::ToggleShadingMode()
 		break;
 	}
 }
+void Renderer::ToggleShowBoudingBox()
+{
+	m_ShowBoundingBox = !m_ShowBoundingBox;
+	std::cout << "Show Bounding Box: " << std::boolalpha << m_ShowBoundingBox << "\n";
+}
+
 
 ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 {
@@ -436,12 +458,12 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 	float shininess{ 25.0f };
 	float observedArea{}; 
 	float KD{ 7.0f };
-	float diffuseReflectance{ 1.0f };
+	float diffuseReflectance{ 2.0f };
 	Vector3 normal{ v.normal }; 
 	Vector3 lightDirection{ 0.577f, -0.577f, 0.577f };
 	ColorRGB phong{};
 	ColorRGB lambert{};
-	//ColorRGB ambient{ 0.30f, 0.30f, 0.30f };
+	ColorRGB ambient{ 0.03f, 0.03f, 0.03f };
 
 	//calculate normal
 	if (m_UseNormalMap)
@@ -454,8 +476,8 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 
 		normal = tangentSpaceAxis.TransformVector(normal);
 
-		normal.Normalize();
 	}
+	normal.Normalize();
 
 	if (m_ShowDepthBuffer == false)
 	{
@@ -463,27 +485,29 @@ ColorRGB Renderer::PixelShading(const Vertex_Out& v)
 		switch (m_ShadingMode)
 		{
 		case Renderer::ShadingMode::ObservedArea:
-			result = ColorRGB(observedArea, observedArea, observedArea);
+			result *= ColorRGB(observedArea, observedArea, observedArea);
 			break;
 
 		case Renderer::ShadingMode::Diffuse:
 			lambert = CalculateDiffuse(diffuseReflectance, v.uv);
-			result = lambert * observedArea;
+			result *= lambert * observedArea;
 			break;
 
 		case Renderer::ShadingMode::Specular:
 			phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
-			result = phong * observedArea;
+			result *= phong * observedArea;
 			break;
 
 		case Renderer::ShadingMode::Combined:
 			lambert = CalculateDiffuse(diffuseReflectance, v.uv);
 			phong = CalculatePhong(normal, lightDirection, v.viewDirection, v.uv, shininess);
-			result = (lambert + phong) * observedArea;
+			result *= (lambert + phong) * observedArea;
 			break;
 		}
 
 	}
+
+	result += ambient;
 
 	return result;
 }
@@ -515,7 +539,8 @@ ColorRGB Renderer::CalculatePhong(const Vector3& normal, const Vector3& lightDir
 
 		float specularReflectCoeficient{ m_SpecularTexture->Sample(uv).r }; 
 
-		float phong{ specularReflectCoeficient * powf(angle, phongExponent) };		
+		float phong{ specularReflectCoeficient * powf(angle, phongExponent) };	
+
 		return ColorRGB(phong, phong, phong);
 	}
 
